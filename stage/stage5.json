@@ -1,6 +1,10 @@
 {
   "scrollSpeed": 85,
   "dialogue": {
+    "speakers": {
+      "boss": "オニノ・ヤマ",
+      "player": "虚無ろん"
+    },
     "portraits": {
       "boss": {
         "normal": "assets/stage5/boss.png",
@@ -369,6 +373,10 @@
       "t": 2.3
     },
     "damagePerHit": 1.5,
+    "autoSpellNumbering": true,
+    "spellRecovery": {
+      "duration": 1.6
+    },
     "spells": [
       {
         "name": "スペルカード1",

@@ -7,6 +7,8 @@ import {
   PRE_BOSS_SILENCE,
   BOSS_WARNING_LEAD,
   INTRO_READY_TIME,
+  SPELL_CARD_COUNTS,
+  BOSS_PATROL_VARIANTS,
   ENEMY_BULLET_SIZE_MUL, ENEMY_BULLET_MIN_R,
   THEME, ACTIVE_PALETTE,
   // Player damage scaling (point-blank bonus)
@@ -128,6 +130,7 @@ export class Game {
     this._bossWarningDuration = 0;
     this._bossSpawnDue = null;
     this._bossCalmTimer = 0;
+    this._bossCalmActive = false;
     this._bossCalmNeeded = Math.max(0, PRE_BOSS_SILENCE ?? 0);
     this._introTimer = 0;
     this._introTotal = 0;
@@ -159,7 +162,9 @@ export class Game {
     // From cache
     const cached = STAGE_CACHE.get(String(pick));
     if (cached && cached.obj) {
-      this.stage = cached.obj;
+    this.stage = cached.obj;
+    this._applySpellNumbering();
+    this._applyDialogueSpeakerNames();
       if (this.hud) this.hud.textContent = `ステージを読み込みました（キャッシュ / ステージ=${pick}）。▶ 開始 でスタート`;
       return;
     }
@@ -170,6 +175,8 @@ export class Game {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const obj = await res.json();
     this.stage = obj;
+    this._applySpellNumbering();
+    this._applyDialogueSpeakerNames();
     STAGE_CACHE.set(String(pick), { obj, url });
     if (this.hud) this.hud.textContent = `ステージを読み込みました（${url}）。▶ 開始 でスタート`;
     // Preload BGM for stage/boss
@@ -323,13 +330,15 @@ export class Game {
     if (this.state === 'intro') this._drawIntroOverlay(g);
     if (!this._bossWarningActive && (this._bossCalmNeeded ?? 0) > 1e-3) {
       const remain = Math.max(0, (this._bossCalmNeeded ?? 0) - (this._bossCalmTimer ?? 0));
-      if (remain > 1e-3 && !this._bossFlowStarted && !this._midActive && this.mode === 'normal' && this.stage?.boss && !this.boss) {
+      const hintLead = Math.min(1.5, Math.max(0.8, (BOSS_WARNING_LEAD ?? 1.5) + 0.2));
+      if (remain > 1e-3 && remain <= hintLead + 1e-6 && !this._bossFlowStarted && !this._midActive && this.mode === 'normal' && this.stage?.boss && !this.boss) {
         this._drawBossCalmHint(g, remain);
       }
     }
     if (this._bossWarningActive) this._drawBossWarning(g);
     // Spell HUD
     this._drawSpellHud(g);
+    this._drawSpellResultBanner(g);
     drawPopups(g);
 
     // GAME OVER overlay
@@ -427,7 +436,10 @@ export class Game {
       if (n <= 0) this.$lblPractice.textContent = '(スペルなし)';
       else {
         const name = spells[i]?.name || 'スペル';
-        this.$lblPractice.textContent = `ステージ-${this.stageNum}  ${i + 1} / ${n}：${name}`;
+        const stIdx = spells[i]?._stageIndex ?? (i + 1);
+        const globalIdx = spells[i]?._globalIndex;
+        const numbering = globalIdx != null ? `${stIdx}/${n} (#${globalIdx})` : `${stIdx}/${n}`;
+        this.$lblPractice.textContent = `ステージ-${this.stageNum}  ${numbering}：${name}`;
       }
     }
     const canPrev = i > 0;
@@ -561,6 +573,7 @@ export class Game {
     audioPlayTitleBgm();
     try { document.body.classList.add('state-title'); } catch (_) {}
     this._bossCalmTimer = 0;
+    if (this._bossCalmActive) this._onBossCalmCancel();
   }
 
   // ---------- Dialogue ----------
@@ -687,10 +700,27 @@ export class Game {
     const waves = Array.isArray(stage.waves) ? stage.waves : [];
     for (const w of waves) {
       const baseT = Number(w.time || 0) || 0;
-      const cnt = Math.max(1, Math.floor((w.count ?? 1) * (DIFF.patternCountMul ?? 1) * (1 /* DIFF_STAGE applied in-game */)));
-      const every = Math.max(0.01, (w.every ?? 0.7) * (DIFF.patternEveryMul ?? 1));
-      for (let i = 0; i < cnt; i++) {
-        ev.push({ t: baseT + i * every, type: 'enemy', payload: w.enemy });
+      const wDiff = w.difficulty?.[difficulty];
+      let cntBase = w.count ?? 1;
+      let everyBase = w.every ?? 0.7;
+      if (wDiff) {
+        if (wDiff.count != null) cntBase = wDiff.count;
+        if (wDiff.countMul != null) cntBase *= wDiff.countMul;
+        if (wDiff.every != null) everyBase = wDiff.every;
+        if (wDiff.everyMul != null) everyBase *= wDiff.everyMul;
+      }
+      cntBase = Math.max(1, Math.floor(cntBase * (DIFF.patternCountMul ?? 1)));
+      everyBase = Math.max(0.01, everyBase * (DIFF.patternEveryMul ?? 1));
+      for (let i = 0; i < cntBase; i++) {
+        const payload = w.enemy ? { ...w.enemy } : null;
+        if (!payload) continue;
+        if (wDiff?.enemy) {
+          payload.difficulty = {
+            ...(payload.difficulty || {}),
+            [difficulty]: { ...(wDiff.enemy) }
+          };
+        }
+        ev.push({ t: baseT + i * everyBase, type: 'enemy', payload });
       }
     }
     // Mid-bosses (defer)
@@ -716,6 +746,7 @@ export class Game {
     while (this._eventIdx < len) {
       const e = ev[this._eventIdx];
       if (!e || e.t > T + 1e-6) break;
+      if (this._bossCalmActive) break;
       if (this._midActive && e.type !== 'midboss') break;
       this._eventIdx++;
       this._dispatchStageEvent(e);
@@ -726,11 +757,14 @@ export class Game {
       const anyActiveEnemy = this.enemies.some(e => e && e.active);
       if (anyActiveEnemy) {
         this._bossCalmTimer = 0;
+        if (this._bossCalmActive) this._onBossCalmCancel();
       } else {
+        if (!this._bossCalmActive) this._onBossCalmStart();
         this._bossCalmTimer = Math.min(calmNeed, this._bossCalmTimer + dt);
       }
     } else if (!bossEligible) {
       this._bossCalmTimer = 0;
+      if (this._bossCalmActive) this._onBossCalmCancel();
     }
 
     if (this._bossWarningActive) {
@@ -784,6 +818,16 @@ export class Game {
     this._softClearEnemyBullets();
   }
 
+  _onBossCalmStart() {
+    this._bossCalmActive = true;
+    this.itemsMagnetT = Math.max(this.itemsMagnetT, 1.0);
+    this._hardClearEnemyBullets();
+  }
+
+  _onBossCalmCancel() {
+    this._bossCalmActive = false;
+  }
+
   _softClearEnemyBullets() {
     for (const b of this.eBullets) {
       if (!b) continue;
@@ -793,9 +837,15 @@ export class Game {
     }
   }
 
+  _hardClearEnemyBullets() {
+    if (this.eBullets.length > 0) this.eBullets.length = 0;
+    if (this.eBeams.length > 0) this.eBeams.length = 0;
+  }
+
   _beginBossSequence() {
     this._bossFlowStarted = true;
     this._bossCalmTimer = 0;
+    if (this._bossCalmActive) this._onBossCalmCancel();
     const talk = this._dialoguePick('preBoss');
     const go = () => { this._spawnBoss(this.stage.boss); };
     if (Array.isArray(talk) && talk.length > 0) this.startDialogue(talk, go, 'preBoss');
@@ -884,13 +934,222 @@ export class Game {
     if (path && path.to) path.to = { x: parseVal(path.to.x), y: parseVal(path.to.y) };
     const pattern = conf.pattern ? { ...conf.pattern } : null;
     const patterns = Array.isArray(conf.patterns) ? conf.patterns.map(p => ({ ...p })) : undefined;
-    return {
+    const base = {
       ...conf,
       spawn,
       path,
       pattern,
       patterns,
     };
+    return this._applyEnemyDifficulty(base);
+  }
+
+  _applyEnemyDifficulty(conf) {
+    if (!conf) return conf;
+    const applyNum = (obj, diff, key, opts = {}) => {
+      if (!obj || !diff) return;
+      const { min = null, round = false } = opts;
+      if (diff[key] != null) obj[key] = diff[key];
+      const mul = diff[`${key}Mul`];
+      if (mul != null) obj[key] = (obj[key] ?? 0) * mul;
+      const add = diff[`${key}Add`];
+      if (add != null) obj[key] = (obj[key] ?? 0) + add;
+      if (obj[key] != null) {
+        if (round) obj[key] = Math.round(obj[key]);
+        if (min != null) obj[key] = Math.max(min, obj[key]);
+      }
+    };
+
+    const patch = conf.difficulty?.[difficulty];
+    if (patch) {
+      applyNum(conf, patch, 'hp', { min: 1, round: true });
+      applyNum(conf, patch, 'duration', { min: 0.1 });
+      if (patch.path && conf.path) conf.path = { ...conf.path, ...patch.path };
+      if (patch.spawn && conf.spawn) conf.spawn = { ...conf.spawn, ...patch.spawn };
+      if (patch.pattern) conf.pattern = this._mergePatternOverride(conf.pattern, patch.pattern);
+      if (Array.isArray(patch.patterns) && Array.isArray(conf.patterns)) {
+        conf.patterns = conf.patterns.map((p, idx) => this._mergePatternOverride(p, patch.patterns[idx] || null));
+      }
+    }
+
+    if (conf.pattern) conf.pattern = this._applyPatternDifficulty(conf.pattern);
+    if (Array.isArray(conf.patterns)) conf.patterns = conf.patterns.map(p => this._applyPatternDifficulty(p));
+    if (conf.difficulty) delete conf.difficulty;
+    return conf;
+  }
+
+  _mergePatternOverride(basePattern, override) {
+    if (!override) return basePattern ? { ...basePattern } : basePattern;
+    const base = basePattern ? { ...basePattern } : {};
+    if (basePattern?.extra) base.extra = { ...basePattern.extra };
+    if (basePattern?.bullet) base.bullet = { ...basePattern.bullet };
+    const entries = { ...override };
+    delete entries.extra;
+    delete entries.bullet;
+    Object.assign(base, entries);
+    if (override.extra) base.extra = { ...(base.extra || {}), ...override.extra };
+    if (override.bullet) base.bullet = { ...(base.bullet || {}), ...override.bullet };
+    return base;
+  }
+
+  _applyPatternDifficulty(pattern) {
+    if (!pattern) return pattern;
+    const p = { ...pattern };
+    if (pattern.extra) p.extra = { ...pattern.extra };
+    if (pattern.bullet) p.bullet = { ...pattern.bullet };
+    const diff = pattern.difficulty?.[difficulty];
+    const applyNum = (obj, diffObj, key, opts = {}) => {
+      if (!diffObj || diffObj[key] == null && diffObj[`${key}Mul`] == null && diffObj[`${key}Add`] == null) return;
+      const { min = null, round = false } = opts;
+      if (diffObj[key] != null) obj[key] = diffObj[key];
+      if (diffObj[`${key}Mul`] != null) obj[key] = (obj[key] ?? 0) * diffObj[`${key}Mul`];
+      if (diffObj[`${key}Add`] != null) obj[key] = (obj[key] ?? 0) + diffObj[`${key}Add`];
+      if (obj[key] != null) {
+        if (round) obj[key] = Math.round(obj[key]);
+        if (min != null) obj[key] = Math.max(min, obj[key]);
+      }
+    };
+
+    if (diff) {
+      if (diff.type) p.type = diff.type;
+      applyNum(p, diff, 'count', { min: 1, round: true });
+      applyNum(p, diff, 'every', { min: 0.01 });
+      applyNum(p, diff, 'speed', { min: 10 });
+      applyNum(p, diff, 'angleWidth');
+      applyNum(p, diff, 'angVel');
+      applyNum(p, diff, 'layers', { min: 1, round: true });
+      applyNum(p, diff, 'petals', { min: 2, round: true });
+      applyNum(p, diff, 'homingSpeed', { min: 0 });
+      if (diff.extra) p.extra = { ...(p.extra || {}), ...diff.extra };
+      if (diff.bullet) p.bullet = { ...(p.bullet || {}), ...diff.bullet };
+    }
+
+    if (p.bullet && pattern.bullet?.difficulty) {
+      const bDiff = pattern.bullet.difficulty?.[difficulty];
+      if (bDiff) p.bullet = { ...p.bullet, ...bDiff };
+      if (p.bullet.difficulty) delete p.bullet.difficulty;
+    }
+
+    delete p.difficulty;
+    return p;
+  }
+
+  _applySpellNumbering() {
+    const stage = this.stage;
+    const boss = stage?.boss;
+    if (!boss || !Array.isArray(boss.spells) || boss.spells.length === 0) return;
+    const config = this._normalizeSpellNumberConfig(boss.autoSpellNumbering ?? stage?.autoSpellNumbering, boss.spellNamePrefix);
+    if (!config) return;
+    const { mode, prefix, force } = config;
+    const baseGlobal = this._spellNumberingBase(this.stageNum);
+    const spells = boss.spells;
+    for (let i = 0; i < spells.length; i++) {
+      const sp = spells[i];
+      if (!sp) continue;
+      const globalIdx = baseGlobal + i;
+      const stageIdx = i + 1;
+      const labelIdx = (mode === 'global') ? globalIdx : stageIdx;
+      sp._globalIndex = globalIdx;
+      sp._stageIndex = stageIdx;
+      sp._autoIndex = labelIdx;
+      if (force || !sp.name) {
+        sp.name = `${prefix}${labelIdx}`;
+      }
+    }
+  }
+
+  _applyDialogueSpeakerNames() {
+    const stage = this.stage;
+    const map = stage?.dialogue?.speakers;
+    if (!map) return;
+    const normalize = (key) => {
+      if (key == null) return null;
+      const str = String(key);
+      const lower = str.toLowerCase();
+      return map[str] ?? map[lower] ?? map[lower.replace(/\s+/g, '')] ?? null;
+    };
+    const fallbackNames = new Set(['ボス', 'プレイヤー', 'プレーヤー']);
+    const applyLine = (line) => {
+      if (!line || typeof line !== 'object') return;
+      const current = (typeof line.name === 'string') ? line.name.trim() : '';
+      const shouldReplace = !current || fallbackNames.has(current);
+      if (shouldReplace) {
+        const label = normalize(line.speaker);
+        if (label) line.name = label;
+      }
+    };
+    const visit = (section) => {
+      if (!section) return;
+      if (Array.isArray(section)) {
+        section.forEach(applyLine);
+      } else if (typeof section === 'object') {
+        Object.values(section).forEach(visit);
+      }
+    };
+    const dlg = stage.dialogue;
+    visit(dlg?.opening);
+    visit(dlg?.preBoss);
+    visit(dlg?.postBoss);
+    visit(dlg?.preMid);
+    visit(dlg?.postMid);
+    visit(dlg?.ending);
+  }
+
+  _normalizeSpellNumberConfig(flag, explicitPrefix) {
+    if (!flag && !explicitPrefix) return null;
+    if (flag === false) return null;
+
+    let mode = 'stage';
+    let prefix = 'スペルカード';
+    let force = true;
+
+    const applyPrefix = (src) => {
+      if (typeof src === 'string' && src.trim().length > 0) {
+        prefix = src.trim();
+      }
+    };
+
+    if (typeof flag === 'object' && flag !== null) {
+      const m = typeof flag.mode === 'string' ? flag.mode.trim().toLowerCase() : '';
+      if (m === 'global' || m === 'stage') mode = m;
+      force = flag.force !== false;
+      applyPrefix(flag.prefix);
+    } else if (typeof flag === 'string') {
+      const trimmed = flag.trim();
+      const lowered = trimmed.toLowerCase();
+      if (lowered === 'global' || lowered === 'stage') {
+        mode = lowered;
+      } else if (trimmed.length > 0 && trimmed !== 'true') {
+        applyPrefix(trimmed);
+      }
+    } else if (flag === true) {
+      mode = 'stage';
+    }
+
+    applyPrefix(explicitPrefix);
+    return { mode, prefix, force };
+  }
+
+  _spellNumberingBase(stageNumStr) {
+    const counts = SPELL_CARD_COUNTS || {};
+    const stageNum = Number(stageNumStr);
+    if (Number.isNaN(stageNum)) return 1;
+    const sorted = Object.keys(counts)
+      .map(n => Number(n))
+      .filter(n => !Number.isNaN(n))
+      .sort((a, b) => a - b);
+    let acc = 0;
+    for (const num of sorted) {
+      if (num >= stageNum) {
+        if (num === stageNum) {
+          return acc + 1;
+        }
+        break;
+      }
+      const key = String(num);
+      acc += counts[key] ?? 0;
+    }
+    return acc + 1;
   }
 
   _updateEnemies(dt) {
@@ -1208,7 +1467,7 @@ export class Game {
     }
     // Include mid-boss explicitly if active (redundant safety in case it's not in enemies list)
     if (this.midBoss && this.midBoss.active) list.push(this.midBoss);
-    if (this.boss && this.boss.active) {
+    if (this.boss && this.boss.active && !this.boss.recovering) {
       // Push boss as a target candidate; PHoming uses x/y and optional velocity
       list.push(this.boss);
     }
@@ -1264,7 +1523,7 @@ export class Game {
           if (e.hp <= 0) { e.active = false; this._dropFromEnemy(e); }
         }
       }
-      if (!hit && this.boss && this.boss.active) {
+      if (!hit && this.boss && this.boss.active && !this.boss.recovering) {
         const b = this.boss;
         const rr = (b.hitR || b.r || 24) + (s.r || 2);
         if (dist2(b.x, b.y, s.x, s.y) <= rr * rr) {
@@ -1588,10 +1847,18 @@ export class Game {
   _drawSpellHud(g) {
     const b = this.boss;
     if (!b || !b.active || !b.useSpells) return;
+    if (b.recovering) {
+      this._drawSpellRecoveryHud(g, b);
+      return;
+    }
     const name = b.spellName || 'スペル';
     const tLeft = Math.max(0, Math.ceil(b.spellTimeLeft || 0));
     const tAll = Math.max(1, Math.ceil(b.spellTime || (b.spellTimeLeft || 1)));
     const bonus = Math.max(0, Math.floor(b.spellBonus || 0));
+    const stageTotal = Array.isArray(b.baseConf?.spells) ? b.baseConf.spells.length : (this.stage?.boss?.spells?.length || null);
+    const metaParts = [];
+    if (b.spellStageIndex != null && stageTotal) metaParts.push(`ステージ内 ${b.spellStageIndex}/${stageTotal}`);
+    if (b.spellGlobalIndex != null) metaParts.push(`通算 #${b.spellGlobalIndex}`);
     const x = 16, y = 10, w = W - 32, h = 44;
     g.save();
     g.globalAlpha = 0.85;
@@ -1605,7 +1872,8 @@ export class Game {
     g.fillText(name, x + 10, y + 18);
     g.font = '12px ui-sans-serif, system-ui';
     g.fillStyle = '#8c8fa1';
-    g.fillText(`残り ${tLeft}s  Bonus ${bonus.toLocaleString('en-US')}`, x + 10, y + 34);
+    const metaLine = metaParts.length > 0 ? ` · ${metaParts.join(' / ')}` : '';
+    g.fillText(`残り ${tLeft}/${tAll}s  Bonus ${bonus.toLocaleString('en-US')}${metaLine}`, x + 10, y + 34);
     // time bar
     const pad = 8;
     const bw = w * 0.35;
@@ -1617,6 +1885,76 @@ export class Game {
     const ratio = Math.max(0, Math.min(1, (b.spellTimeLeft || 0) / (b.spellTime || (b.spellTimeLeft || 1))));
     g.fillStyle = '#93c5fd';
     g.fillRect(bx, by, Math.floor(bw * ratio), bh);
+    g.restore();
+  }
+
+  _drawSpellRecoveryHud(g, boss) {
+    const nextSpell = boss.pendingSpell || boss.spells?.[boss.spellIndex] || null;
+    const name = boss.spellPrepName || nextSpell?.name || '次のスペル';
+    const stageTotal = Array.isArray(boss.baseConf?.spells) ? boss.baseConf.spells.length : (this.stage?.boss?.spells?.length || null);
+    const stageIdx = nextSpell?._stageIndex ?? boss.spellStageIndex ?? null;
+    const globalIdx = nextSpell?._globalIndex ?? null;
+    const metaParts = [];
+    if (stageIdx != null && stageTotal) metaParts.push(`ステージ内 ${stageIdx}/${stageTotal}`);
+    if (globalIdx != null) metaParts.push(`通算 #${globalIdx}`);
+    const x = 16, y = 10, w = W - 32, h = 44;
+    g.save();
+    g.globalAlpha = 0.85;
+    g.fillStyle = '#06111f';
+    g.fillRect(x, y, w, h);
+    g.strokeStyle = '#2a3147';
+    g.lineWidth = 2;
+    g.strokeRect(x, y, w, h);
+    g.fillStyle = '#cdd6f4';
+    g.font = 'bold 14px ui-sans-serif, system-ui';
+    g.fillText(`${name} 準備中`, x + 10, y + 18);
+    g.font = '12px ui-sans-serif, system-ui';
+    g.fillStyle = '#8c8fa1';
+    const metaLine = metaParts.length > 0 ? `（${metaParts.join(' / ')}）` : '';
+    g.fillText(`ボスの力が回復している… ${metaLine}`, x + 10, y + 34);
+    const ratio = Math.max(0, Math.min(1, boss.recoverDur > 1e-4 ? (boss.recoverT || 0) / boss.recoverDur : 1));
+    const pad = 8;
+    const bw = w * 0.4;
+    const bx = x + w - pad - bw;
+    const by = y + 12;
+    const bh = 20;
+    g.strokeStyle = '#2f3d55';
+    g.strokeRect(bx, by, bw, bh);
+    const fillW = Math.floor(bw * ratio);
+    const grd = g.createLinearGradient(bx, by, bx + bw, by);
+    grd.addColorStop(0, '#50f2c1');
+    grd.addColorStop(1, '#1dd6ff');
+    g.fillStyle = grd;
+    g.fillRect(bx, by, fillW, bh);
+    g.restore();
+  }
+
+  _drawSpellResultBanner(g) {
+    const b = this.boss;
+    if (!b || b.spellResultTimer <= 0 || !b.spellResultText) return;
+    const t = Math.max(0, Math.min(1, b.spellResultTimer / 2.8));
+    const alpha = Math.min(0.85, 0.2 + t * 0.65);
+    const y = H * 0.22;
+    const msg = b.spellResultText;
+    g.save();
+    g.globalAlpha = alpha;
+    g.fillStyle = b.spellResultSuccess ? '#0a182e' : '#301212';
+    const padX = 32;
+    const padY = 18;
+    const font = 'bold 24px "Trebuchet MS", system-ui, sans-serif';
+    g.font = font;
+    const textW = g.measureText(msg).width;
+    const bw = textW + padX * 2;
+    const bh = 48;
+    const bx = (W - bw) / 2;
+    g.fillRect(bx, y - padY, bw, bh);
+    g.strokeStyle = b.spellResultSuccess ? '#38bdf8' : '#f87171';
+    g.lineWidth = 2;
+    g.strokeRect(bx, y - padY, bw, bh);
+    g.fillStyle = '#f5f9ff';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(msg, W / 2, y + 6);
     g.restore();
   }
 

@@ -1,5 +1,5 @@
 import { Enemy } from './enemy.js';
-import { W, PLAYER_SHOT_DMG_BOSS_DEFAULT, BOSS_PATROL_SPEED_SCALE, BOSS_PATROL_EDGE_PAUSE } from '../config.js';
+import { W, PLAYER_SHOT_DMG_BOSS_DEFAULT, BOSS_PATROL_SPEED_SCALE, BOSS_PATROL_EDGE_PAUSE, BOSS_PATROL_VARIANTS } from '../config.js';
 import { getImage } from './dialogue.js';
 import { DIFF, DIFF_STAGE, getStageNumInt, stageDropCount } from '../game-state.js';
 import { randRange, clamp } from '../utils.js';
@@ -49,6 +49,22 @@ export class Boss extends Enemy {
     this.spellBonus = 0;
     this.spellBroken = false;
     this.declareT = 0;
+    this.spellGlobalIndex = null;
+    this.spellStageIndex = null;
+    this.spellDisplayIndex = null;
+    this.recovering = false;
+    this.recoverT = 0;
+    this.recoverDur = 0;
+    this.recoverStartHp = 0;
+    this.recoverTargetHp = 0;
+    this.pendingSpell = null;
+    this.spellPrepName = '';
+    this.spellResultTimer = 0;
+    this.spellResultSuccess = false;
+    this.spellResultText = '';
+    this.patrolDriftAmp = 0;
+    this.patrolDriftSpeed = 0;
+    this.patrolDriftPhase = 0;
   }
 
   spawn(conf) {
@@ -86,15 +102,21 @@ export class Boss extends Enemy {
 
   applyPatrolConfig(patrol) {
     const s = getStageNumInt();
-    const defAmpX = Math.min(260, 120 + (s - 1) * 22);
-    const defSpeedX = Math.min(150, 90 + (s - 1) * 6); // slower default
-    const defAmpY = Math.min(22, 6 + (s - 1) * 2);
-    const defSpeedY = Math.min(2.4, 1.0 + (s - 1) * 0.12);
+    const variant = BOSS_PATROL_VARIANTS?.[String(s)] || null;
+    const defAmpX = variant?.ampX ?? Math.min(220, 110 + (s - 1) * 18);
+    const defSpeedX = (variant?.speedMul ?? 0.7) * Math.min(130, 80 + (s - 1) * 5);
+    const defAmpY = variant?.hoverAmp ?? Math.min(24, 8 + (s - 1) * 3);
+    const defSpeedY = variant?.hoverSpeed ?? Math.min(2.0, 1.0 + (s - 1) * 0.1);
+    const defDriftAmp = variant?.driftAmp ?? Math.min(60, 20 + (s - 1) * 8);
+    const defDriftSpeed = variant?.driftSpeed ?? (0.45 + (s - 1) * 0.05);
     const p = patrol || {};
     this.patrolAmpX = (typeof p.ampX === 'number') ? p.ampX : defAmpX;
     this.patrolSpeed = ((typeof p.speedX === 'number') ? p.speedX : defSpeedX) * (BOSS_PATROL_SPEED_SCALE || 1);
     this.hoverAmp = (typeof p.ampY === 'number') ? p.ampY : defAmpY;
     this.hoverSpeed = (typeof p.speedY === 'number') ? p.speedY : defSpeedY;
+    this.patrolDriftAmp = (typeof p.driftAmp === 'number') ? p.driftAmp : defDriftAmp;
+    this.patrolDriftSpeed = Math.max(0, (typeof p.driftSpeed === 'number') ? p.driftSpeed : defDriftSpeed);
+    this.patrolDriftPhase = 0;
   }
 
   _loadSpell(sp) {
@@ -116,6 +138,16 @@ export class Boss extends Enemy {
     this.spellTime = Math.max(5, sp.time ?? 30);
     this.spellTimeLeft = this.spellTime;
     this.spellName = sp.name ?? `スペル ${this.spellIndex + 1}`;
+    this.spellGlobalIndex = sp._globalIndex ?? null;
+    this.spellStageIndex = sp._stageIndex ?? null;
+    this.spellDisplayIndex = sp._autoIndex ?? this.spellStageIndex ?? this.spellGlobalIndex ?? null;
+    this.spellPrepName = '';
+    this.recovering = false;
+    this.pendingSpell = null;
+    this.recoverT = 0;
+    this.recoverDur = 0;
+    this.spellResultTimer = 0;
+    this.spellResultText = '';
     this.spellBonus = Math.max(0, sp.bonus ?? 100000);
     this.spellBroken = false;
     this.declareT = 0;
@@ -141,6 +173,32 @@ export class Boss extends Enemy {
     }
   }
 
+  _beginSpellRecovery(nextSpell) {
+    if (!nextSpell) {
+      this.recovering = false;
+      this.pendingSpell = null;
+      return;
+    }
+    const baseRec = this.baseConf?.spellRecovery || {};
+    const recConf = nextSpell.recovery || baseRec;
+    this.recoverDur = Math.max(0.12, recConf.duration ?? 1.2);
+    this.recoverT = 0;
+    this.recoverStartHp = Math.max(0, this.hp);
+    const targetHp = Math.max(1, nextSpell.hp ?? this.baseConf?.hp ?? this.maxHp || 1500);
+    this.recoverTargetHp = targetHp;
+    this.maxHp = targetHp;
+    this.hp = this.recoverStartHp;
+    this.recovering = true;
+    this.pendingSpell = nextSpell;
+    this.spellPrepName = nextSpell.name ?? '';
+    this.spellTime = 0;
+    this.spellTimeLeft = 0;
+    this.spellName = this.spellName || '';
+    this.emitters.length = 0;
+    this.inv = Math.max(this.inv ?? 0, this.recoverDur + 0.4);
+    this.spellResultTimer = Math.max(0, this.spellResultTimer);
+  }
+
   _advanceSpell(success = true) {
     if (!this.useSpells) {
       this.active = false;
@@ -149,15 +207,21 @@ export class Boss extends Enemy {
     
     // Clear bullets handled by game
     
-    if (success && !this.spellBroken) {
+    const prevName = this.spellName;
+    const effectiveSuccess = success && !this.spellBroken;
+    if (effectiveSuccess) {
       sfxSpellCapture();
     } else {
       sfxSpellFail();
     }
+    this.spellResultSuccess = effectiveSuccess;
+    this.spellResultText = effectiveSuccess ? `${prevName || 'スペル'} 取得！` : `${prevName || 'スペル'} 失敗…`;
+    this.spellResultTimer = 2.8;
     
     this.spellIndex++;
     if (this.spellIndex < this.spells.length) {
-      this._loadSpell(this.spells[this.spellIndex]);
+      const next = this.spells[this.spellIndex];
+      this._beginSpellRecovery(next);
     } else {
       this.active = false;
     }
@@ -166,6 +230,29 @@ export class Boss extends Enemy {
   update(dt) {
     if (!this.active) return;
     this.t += dt;
+    if (this.spellResultTimer > 0) {
+      this.spellResultTimer = Math.max(0, this.spellResultTimer - dt);
+    }
+
+    if (this.recovering) {
+      const dur = Math.max(0.05, this.recoverDur || 0.05);
+      this.recoverT += dt;
+      const raw = Math.min(1, this.recoverT / dur);
+      const eased = 1 - Math.pow(1 - raw, 2.2);
+      const nextHp = this.recoverStartHp + (this.recoverTargetHp - this.recoverStartHp) * eased;
+      this.hp = Math.min(this.recoverTargetHp, nextHp);
+      this.maxHp = Math.max(this.maxHp, this.recoverTargetHp);
+      this.inv = Math.max(this.inv ?? 0, 0.2);
+      if (raw >= 1 - 1e-4) {
+        const pending = this.pendingSpell;
+        this.recovering = false;
+        this.pendingSpell = null;
+        this.recoverT = 0;
+        this.recoverDur = 0;
+        this._loadSpell(pending);
+      }
+      return;
+    }
     
     // Path movement
     if (this.path) {
@@ -218,8 +305,14 @@ export class Boss extends Enemy {
       }
       const amp = this.hoverAmp || 0;
       const sp = this.hoverSpeed || 1.0;
+      if (this.patrolDriftSpeed > 0 && this.patrolDriftAmp !== 0) {
+        this.patrolDriftPhase = (this.patrolDriftPhase || 0) + dt * this.patrolDriftSpeed;
+      }
+      const drift = (this.patrolDriftAmp || 0) * Math.sin(this.patrolDriftPhase || 0);
       if (amp > 0) {
-        this.y = this.anchorY + Math.sin(this.t * sp) * amp;
+        this.y = this.anchorY + drift + Math.sin(this.t * sp) * amp;
+      } else {
+        this.y = this.anchorY + drift;
       }
     }
     
@@ -270,5 +363,15 @@ export class Boss extends Enemy {
       }
     } catch (_) { /* ignore draw errors */ }
     if (!drawn) super.draw(g);
+    if (this.recovering) {
+      g.save();
+      const pulse = 0.4 + 0.6 * Math.sin((this.recoverT || 0) * Math.PI);
+      g.globalAlpha = 0.35 + pulse * 0.3;
+      g.fillStyle = '#50f2c1';
+      g.beginPath();
+      g.arc(this.x, this.y, (this.r || 28) + 16, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
   }
 }

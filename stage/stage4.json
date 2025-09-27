@@ -1,6 +1,10 @@
 {
   "scrollSpeed": 80,
   "dialogue": {
+    "speakers": {
+      "boss": "ゴブリンスレイヤー木下",
+      "player": "虚無ろん"
+    },
     "portraits": {
       "boss": {
         "normal": "assets/stage4/boss.png",
@@ -381,6 +385,10 @@
       "t": 2.2
     },
     "damagePerHit": 2,
+    "autoSpellNumbering": true,
+    "spellRecovery": {
+      "duration": 1.45
+    },
     "spells": [
       {
         "name": "スペルカード1",

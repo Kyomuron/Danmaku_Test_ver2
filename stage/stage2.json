@@ -1,6 +1,10 @@
 {
   "scrollSpeed": 70,
   "dialogue": {
+    "speakers": {
+      "boss": "Mrs. クリーミー・キジ",
+      "player": "虚無ろん"
+    },
     "portraits": {
       "boss": {
         "normal": "assets/stage2/boss.png",
@@ -367,6 +371,10 @@
       "t": 2.2
     },
     "damagePerHit": 3,
+    "autoSpellNumbering": true,
+    "spellRecovery": {
+      "duration": 1.2
+    },
     "spells": [
       {
         "name": "スペルカード1",

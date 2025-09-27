@@ -135,9 +135,7 @@ export class Dialogue {
     g.strokeRect(bx, by, bw, bh);
     
     // Text (icons disabled)
-    const name = line.name || 
-                 (line.speaker === 'boss' ? 'ボス' : 
-                  line.speaker === 'player' ? 'プレイヤー' : '');
+    const name = line.name || this._resolveSpeakerLabel(line, stage);
     g.fillStyle = '#cdd6f4';
     g.font = '13px ui-sans-serif, system-ui';
     if (name) g.fillText(name, bx + 12, by + 20);
@@ -226,4 +224,16 @@ export class Dialogue {
 
   // Icons disabled: always return null
   getDefaultIcon(speaker, stage) { return null; }
+
+  _resolveSpeakerLabel(line, stage) {
+    const raw = (line?.speaker || '').toLowerCase();
+    const map = stage?.dialogue?.speakers || stage?.dialogue?.labels || stage?.dialogue?.names || null;
+    if (map) {
+      const key = raw || (typeof line?.speaker === 'string' ? line.speaker : '');
+      if (key && map[key] != null) return String(map[key]);
+    }
+    if (raw === 'boss') return 'ボス';
+    if (raw === 'player') return 'プレイヤー';
+    return '';
+  }
 }
