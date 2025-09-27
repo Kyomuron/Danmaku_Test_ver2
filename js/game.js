@@ -328,7 +328,7 @@ export class Game {
       else this._drawBombA(this.player, g);
     }
     if (this.state === 'intro') this._drawIntroOverlay(g);
-    if (!this._bossWarningActive && (this._bossCalmNeeded ?? 0) > 1e-3) {
+    if (!this._bossWarningActive && this._bossCalmActive && (this._bossCalmNeeded ?? 0) > 1e-3) {
       const remain = Math.max(0, (this._bossCalmNeeded ?? 0) - (this._bossCalmTimer ?? 0));
       const hintLead = Math.min(1.5, Math.max(0.8, (BOSS_WARNING_LEAD ?? 1.5) + 0.2));
       if (remain > 1e-3 && remain <= hintLead + 1e-6 && !this._bossFlowStarted && !this._midActive && this.mode === 'normal' && this.stage?.boss && !this.boss) {
@@ -682,7 +682,12 @@ export class Game {
     this._bossFlowStarted = false;
     this._bossClearHandled = false;
     this.stageTime = 0;
-    this._events = this._compileStageEvents(this.stage);
+    if (this.mode === 'practice') {
+      this._events = [];
+      this._bossTriggerT = 0;
+    } else {
+      this._events = this._compileStageEvents(this.stage);
+    }
     this._eventIdx = 0;
     this._homingTargetsCache.length = 0;
     this._bossWarningActive = false;
@@ -744,6 +749,7 @@ export class Game {
     const ev = this._events || [];
     const len = ev.length;
     while (this._eventIdx < len) {
+      if (this._bossFlowStarted) break;
       const e = ev[this._eventIdx];
       if (!e || e.t > T + 1e-6) break;
       if (this._midActive && e.type !== 'midboss') break;
