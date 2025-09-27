@@ -6,6 +6,7 @@ import {
   EXTENDS,
   PRE_BOSS_SILENCE,
   BOSS_WARNING_LEAD,
+  INTRO_READY_TIME,
   ENEMY_BULLET_SIZE_MUL, ENEMY_BULLET_MIN_R,
   THEME, ACTIVE_PALETTE,
   // Player damage scaling (point-blank bonus)
@@ -126,6 +127,13 @@ export class Game {
     this._bossWarningCountdown = 0;
     this._bossWarningDuration = 0;
     this._bossSpawnDue = null;
+    this._bossCalmTimer = 0;
+    this._bossCalmNeeded = Math.max(0, PRE_BOSS_SILENCE ?? 0);
+    this._introTimer = 0;
+    this._introTotal = 0;
+    this._introCallback = null;
+    this._introHudMsg = '';
+    this._statsLast = Object.create(null);
 
     // Dialogue manager
     this.dialogue = new Dialogue();
@@ -219,7 +227,8 @@ export class Game {
   }
 
   update(dt) {
-    if (this.state === 'playing') {
+    if (this.state === 'playing' || this.state === 'intro') {
+      const inIntro = this.state === 'intro';
       // Player
       const _plPrevLives = this._prevLives ?? this.player.lives;
       this.player.update(dt, (p) => this._shootPlayer(p));
@@ -233,16 +242,25 @@ export class Game {
         s.update(dt, homingTargets, this.player);
         if (!s.active) this.pshots.splice(i, 1);
       }
-      // Stage timeline
-      this._updateStageTimeline(dt);
-      // Enemies
-      this._updateEnemies(dt);
-      // Enemy bullets
-      this._updateEnemyBullets(dt);
-      // Enemy beams
-      this._updateEnemyBeams(dt);
-      // Collisions
-      this._handleCollisions();
+      if (!inIntro) {
+        // Stage timeline
+        this._updateStageTimeline(dt);
+        // Enemies
+        this._updateEnemies(dt);
+        // Enemy bullets
+        this._updateEnemyBullets(dt);
+        // Enemy beams
+        this._updateEnemyBeams(dt);
+        // Collisions
+        this._handleCollisions();
+      } else {
+        // Even during intro, decay any leftover bullets/items softly
+        for (let i = this.eBullets.length - 1; i >= 0; i--) {
+          const b = this.eBullets[i];
+          b.update(dt, this.player);
+          if (!b.active) this.eBullets.splice(i, 1);
+        }
+      }
       // Bomb effects
       if (this.player.isBombing) {
         if (ship === 'B') this._updateBombB(this.player, dt);
@@ -258,6 +276,17 @@ export class Game {
       updatePopups(dt);
       this.time += dt;
       this._updateStatsPanel();
+      if (inIntro) {
+        this._introTimer = Math.max(0, (this._introTimer || 0) - dt);
+        if (this._introTimer <= 1e-3) {
+          const cb = this._introCallback;
+          this._introTimer = 0;
+          this._introTotal = 0;
+          this._introCallback = null;
+          this._introHudMsg = '';
+          if (typeof cb === 'function') cb();
+        }
+      }
     } else if (this.state === 'dialogue') {
       // Dialogue is advanced via key handlers; no simulation advance needed
     }
@@ -290,6 +319,13 @@ export class Game {
     if (this.player.isBombing) {
       if (ship === 'B') this._drawBombB(this.player, g);
       else this._drawBombA(this.player, g);
+    }
+    if (this.state === 'intro') this._drawIntroOverlay(g);
+    if (!this._bossWarningActive && (this._bossCalmNeeded ?? 0) > 1e-3) {
+      const remain = Math.max(0, (this._bossCalmNeeded ?? 0) - (this._bossCalmTimer ?? 0));
+      if (remain > 1e-3 && !this._bossFlowStarted && !this._midActive && this.mode === 'normal' && this.stage?.boss && !this.boss) {
+        this._drawBossCalmHint(g, remain);
+      }
     }
     if (this._bossWarningActive) this._drawBossWarning(g);
     // Spell HUD
@@ -355,20 +391,30 @@ export class Game {
     const p = this.player;
     const S = this.$st;
     if (!S) return;
-    if (S.lives) S.lives.textContent = String(Math.max(0, p.lives));
-    if (S.bombs) S.bombs.textContent = String(Math.max(0, p.bombs));
-    if (S.lsh) S.lsh.textContent = `${lifeShards ?? 0}/${LIFE_SHARDS_TO_EXTEND}`;
-    if (S.bsh) S.bsh.textContent = `${bombShards ?? 0}/${BOMB_SHARDS_TO_BOMB}`;
-    if (S.pow) S.pow.textContent = (p.power ?? 0).toFixed(2);
-    if (S.score) S.score.textContent = (score ?? 0).toLocaleString('en-US');
-    if (S.graze) S.graze.textContent = String(graze ?? 0);
-    if (S.ebul) S.ebul.textContent = '0'; // placeholder until enemy bullets wired
-    if (S.ebul) {
-      const beamCnt = (this.eBeams?.filter(b => b.active && b.phase === 'fire').length) || 0;
-      S.ebul.textContent = String(this.eBullets.length + beamCnt);
+    const last = this._statsLast || (this._statsLast = Object.create(null));
+    const update = (node, key, value) => {
+      if (!node) return;
+      if (last[key] !== value) {
+        node.textContent = value;
+        last[key] = value;
+      }
+    };
+    update(S.lives, 'lives', String(Math.max(0, p.lives)));
+    update(S.bombs, 'bombs', String(Math.max(0, p.bombs)));
+    update(S.lsh, 'lsh', `${lifeShards ?? 0}/${LIFE_SHARDS_TO_EXTEND}`);
+    update(S.bsh, 'bsh', `${bombShards ?? 0}/${BOMB_SHARDS_TO_BOMB}`);
+    update(S.pow, 'pow', (p.power ?? 0).toFixed(2));
+    update(S.score, 'score', fmtNum(score ?? 0));
+    update(S.graze, 'graze', String(graze ?? 0));
+    let beamCnt = 0;
+    if (Array.isArray(this.eBeams) && this.eBeams.length > 0) {
+      for (const beam of this.eBeams) {
+        if (beam && beam.active && beam.phase === 'fire') beamCnt++;
+      }
     }
-    if (S.diff) S.diff.textContent = DIFF?.label || difficulty || '-';
-    if (S.ship) S.ship.textContent = ship || '-';
+    update(S.ebul, 'ebul', String(this.eBullets.length + beamCnt));
+    update(S.diff, 'diff', DIFF?.label || difficulty || '-');
+    update(S.ship, 'ship', ship || '-');
   }
 
   updatePracticeUI() {
@@ -399,16 +445,34 @@ export class Game {
   }
 
   // ---------- Flow controls ----------
+  _beginIntro(duration, hudMsg, onFinish) {
+    const d = Math.max(0, duration ?? 0);
+    if (d <= 1e-3) {
+      this._introTimer = 0;
+      this._introTotal = 0;
+      this._introCallback = null;
+      this._introHudMsg = '';
+      if (typeof onFinish === 'function') onFinish();
+      return;
+    }
+    this.state = 'intro';
+    this._introTimer = d;
+    this._introTotal = d;
+    this._introCallback = (typeof onFinish === 'function') ? onFinish : null;
+    this._introHudMsg = hudMsg || '';
+    if (hudMsg && this.hud) this.hud.textContent = hudMsg;
+    // Extend invulnerability slightly so stray bullets/bombs cannot clip the player before the countdown ends
+    this.player.inv = Math.max(this.player.inv, d + 0.5);
+  }
+
   startGame() {
     if (!this.stage) return;
     this.mode = 'normal';
-    this.state = 'playing';
     this.time = 0;
     this.player.reset();
     resetScore();
     this._nextExtendIdx = 0;
     this._resetStageRuntime();
-    if (this.hud) this.hud.textContent = `ステージ-${this.stageNum} [${DIFF.label}]：がんばって！`;
     this.$btnPause?.classList.remove('muted');
     this.$btnRestart?.classList.remove('muted');
     try { document.body.classList.remove('state-title'); } catch (_) {}
@@ -416,6 +480,10 @@ export class Game {
     const b = this.stage?.bgm;
     const url = (typeof b === 'string') ? b : (b?.stage || null);
     if (url) bgmPlay(url, { loop: true, fadeIn: 0.6 });
+    this._beginIntro(INTRO_READY_TIME, `ステージ-${this.stageNum} 準備中…`, () => {
+      this.state = 'playing';
+      if (this.hud) this.hud.textContent = `ステージ-${this.stageNum} [${DIFF.label}]：がんばって！`;
+    });
   }
 
   startPractice() {
@@ -424,25 +492,32 @@ export class Game {
     // Optional: show pre-boss dialogue if available
     const talk = this.stage?.dialogue?.preBoss;
     const spawn = () => {
-      this.state = 'playing';
       this.time = 0;
       this.player.reset();
       resetScore();
       this._nextExtendIdx = 0;
       this._resetStageRuntime();
-      if (this.hud) this.hud.textContent = `練習: ${(this.getBossSpells()?.[this.practiceSpellIndex]?.name || 'スペル')}（ステージ-${this.stageNum} / ${DIFF.label}）`;
+      const spellName = this.getBossSpells()?.[this.practiceSpellIndex]?.name || 'スペル';
+      const hudReadyMsg = `練習準備中…（${spellName}）`;
+      const hudActiveMsg = `練習: ${spellName}（ステージ-${this.stageNum} / ${DIFF.label}）`;
+      if (this.hud) this.hud.textContent = hudReadyMsg;
       this.$btnPause?.classList.remove('muted');
       this.$btnRestart?.classList.remove('muted');
       try { document.body.classList.remove('state-title'); } catch (_) {}
-      // Spawn boss with only the selected spell
       const base = this.stage?.boss;
-      if (base) {
-        const spells = Array.isArray(base.spells) ? base.spells : [];
-        const i = Math.max(0, Math.min(spells.length - 1, this.practiceSpellIndex || 0));
-        const pick = spells[i] ? [spells[i]] : [];
-        const conf = { ...base, spells: pick };
-        this._spawnBoss(conf);
-      }
+      const onIntroEnd = () => {
+        this.state = 'playing';
+        if (this.hud) this.hud.textContent = hudActiveMsg;
+        // Spawn boss with only the selected spell
+        if (base) {
+          const spells = Array.isArray(base.spells) ? base.spells : [];
+          const i = Math.max(0, Math.min(spells.length - 1, this.practiceSpellIndex || 0));
+          const pick = spells[i] ? [spells[i]] : [];
+          const conf = { ...base, spells: pick };
+          this._spawnBoss(conf);
+        }
+      };
+      this._beginIntro(INTRO_READY_TIME * 0.75, hudReadyMsg, onIntroEnd);
     };
     if (Array.isArray(talk) && talk.length > 0) this.startDialogue(talk, spawn, 'preBoss');
     else spawn();
@@ -485,6 +560,7 @@ export class Game {
     if (this.hud) this.hud.textContent = '難易度・自機を選んで ▶ 開始 / 矢印・Z / X / Shift / P';
     audioPlayTitleBgm();
     try { document.body.classList.add('state-title'); } catch (_) {}
+    this._bossCalmTimer = 0;
   }
 
   // ---------- Dialogue ----------
@@ -601,6 +677,7 @@ export class Game {
     this._bossWarningCountdown = 0;
     this._bossWarningDuration = 0;
     this._bossSpawnDue = null;
+    this._bossCalmTimer = 0;
   }
 
   _compileStageEvents(stage) {
@@ -627,7 +704,7 @@ export class Game {
     ev.sort((a, b) => a.t - b.t);
     // Compute boss trigger time (last event + silence)
     const lastT = ev.length > 0 ? ev[ev.length - 1].t : 0;
-    this._bossTriggerT = lastT + (PRE_BOSS_SILENCE ?? 0);
+    this._bossTriggerT = lastT;
     return ev;
   }
 
@@ -643,6 +720,19 @@ export class Game {
       this._eventIdx++;
       this._dispatchStageEvent(e);
     }
+    const bossEligible = !this.boss && !this._bossFlowStarted && !this._midActive && this.stage?.boss && this.mode === 'normal';
+    const calmNeed = this._bossCalmNeeded ?? 0;
+    if (bossEligible && !this._bossWarningActive) {
+      const anyActiveEnemy = this.enemies.some(e => e && e.active);
+      if (anyActiveEnemy) {
+        this._bossCalmTimer = 0;
+      } else {
+        this._bossCalmTimer = Math.min(calmNeed, this._bossCalmTimer + dt);
+      }
+    } else if (!bossEligible) {
+      this._bossCalmTimer = 0;
+    }
+
     if (this._bossWarningActive) {
       this._bossWarningT += dt;
       if (this._bossSpawnDue != null) {
@@ -662,8 +752,8 @@ export class Game {
         }
         spawnNow();
       }
-    } else if (!this.boss && !this._bossFlowStarted && !this._midActive && this.enemies.length === 0 && this.stage?.boss && this.mode === 'normal') {
-      if (T >= (this._bossTriggerT || 0)) {
+    } else if (bossEligible) {
+      if (this._bossCalmTimer >= calmNeed - 1e-6 && T >= (this._bossTriggerT || 0)) {
         const warnLead = BOSS_WARNING_LEAD ?? 0;
         if (warnLead > 1e-3) {
           this._bossWarningActive = true;
@@ -705,6 +795,7 @@ export class Game {
 
   _beginBossSequence() {
     this._bossFlowStarted = true;
+    this._bossCalmTimer = 0;
     const talk = this._dialoguePick('preBoss');
     const go = () => { this._spawnBoss(this.stage.boss); };
     if (Array.isArray(talk) && talk.length > 0) this.startDialogue(talk, go, 'preBoss');
@@ -1417,6 +1508,60 @@ export class Game {
       }
       this._nextExtendIdx = idx;
     }
+  }
+
+  _drawBossCalmHint(g, remain) {
+    g.save();
+    const boxW = 280;
+    const boxH = 54;
+    const x = (W - boxW) / 2;
+    const y = 86;
+    g.globalAlpha = 0.75;
+    g.fillStyle = '#05070d';
+    g.fillRect(x, y, boxW, boxH);
+    g.strokeStyle = '#1b263b';
+    g.lineWidth = 2;
+    g.strokeRect(x, y, boxW, boxH);
+    g.globalAlpha = 1;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = 'bold 20px "Trebuchet MS", system-ui, sans-serif';
+    g.fillStyle = '#f8f9fa';
+    g.fillText('静寂のひととき', W / 2, y + 18);
+    g.font = '16px system-ui, sans-serif';
+    g.fillStyle = '#94e2d5';
+    g.fillText(`あと ${remain.toFixed(1)} 秒でボス戦`, W / 2, y + 38);
+    g.restore();
+  }
+
+  _drawIntroOverlay(g) {
+    const remain = Math.max(0, this._introTimer || 0);
+    const total = Math.max(remain, this._introTotal || remain || 1);
+    const progress = total > 1e-3 ? 1 - (remain / total) : 1;
+    g.save();
+    g.globalAlpha = 0.65;
+    g.fillStyle = '#05070d';
+    g.fillRect(0, 0, W, H);
+    g.globalAlpha = 1;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = 'bold 42px "Trebuchet MS", system-ui, sans-serif';
+    g.fillStyle = '#00e5ff';
+    g.fillText('READY', W / 2, H / 2 - 24);
+    g.font = '24px system-ui, sans-serif';
+    g.fillStyle = '#cdd6f4';
+    g.fillText(`開始まで ${remain.toFixed(1)} 秒`, W / 2, H / 2 + 12);
+    // Progress bar
+    const barW = Math.floor(W * 0.55);
+    const barH = 12;
+    const bx = (W - barW) / 2;
+    const by = H / 2 + 42;
+    g.strokeStyle = '#1b263b';
+    g.lineWidth = 2;
+    g.strokeRect(bx, by, barW, barH);
+    g.fillStyle = '#00ff9c';
+    g.fillRect(bx + 2, by + 2, (barW - 4) * Math.max(0, Math.min(1, progress)), barH - 4);
+    g.restore();
   }
 
   _drawBossWarning(g) {

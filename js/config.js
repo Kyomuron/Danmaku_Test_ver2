@@ -28,6 +28,7 @@ export const GRAZE_PER_BOMB_SHARD = 50;
 export const PRE_MIDBOSS_SILENCE = 2.5; // seconds of no new trash before mid-boss
 export const PRE_BOSS_SILENCE = 3.0;    // seconds of quiet before boss appears
 export const BOSS_WARNING_LEAD = 1.5;   // seconds before spawn to display warning overlay
+export const INTRO_READY_TIME = 2.2;    // seconds of countdown before a run starts
 
 // Edge (off-screen) attack defaults
 export const EDGE_MARGIN = 18;
