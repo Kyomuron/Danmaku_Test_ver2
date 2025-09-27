@@ -65,6 +65,7 @@ import {
 
 const STAGE_CACHE = new Map(); // stageNum(string) -> { obj, url }
 const STAGE_PRELOADING = new Set();
+const SPELL_BAR_COLORS = ['#ef4444', '#60a5fa', '#34d399', '#a855f7', '#f59e0b', '#f97316', '#14b8a6', '#e11d48'];
 
 function stagePath(n) {
   const i = String(n);
@@ -1859,196 +1860,163 @@ export class Game {
   _drawSpellHud(g) {
     const b = this.boss;
     if (!b || !b.active || !b.useSpells) return;
-    if (b.recovering) {
-      this._drawSpellRecoveryHud(g, b);
-      return;
-    }
-    const name = b.spellName || 'スペル';
-    const tLeft = Math.max(0, Math.ceil(b.spellTimeLeft || 0));
-    const tAll = Math.max(1, Math.ceil(b.spellTime || (b.spellTimeLeft || 1)));
-    const hpNow = Math.max(0, Math.ceil(b.hp ?? 0));
-    const hpAll = Math.max(1, Math.ceil(b.maxHp ?? 1));
-    const bonus = Math.max(0, Math.floor(b.spellBonus || 0));
-    const stageTotal = this._getBossSpellCount(b);
-    const metaParts = [];
-    if (b.spellStageIndex != null && stageTotal) metaParts.push(`ステージ内 ${b.spellStageIndex}/${stageTotal}`);
-    if (b.spellGlobalIndex != null) metaParts.push(`通算 #${b.spellGlobalIndex}`);
+
+    const spells = this._resolveBossSpells();
+    if (!spells || spells.length === 0) return;
+
+    const history = new Map((b.completedSpells || []).map(entry => [entry.index, !!entry.success]));
+    const currentIndex = b.recovering
+      ? (b.pendingSpell?._stageIndex ?? (b.spellStageIndex != null ? b.spellStageIndex + 1 : (b.spellIndex + 1)))
+      : (b.spellStageIndex ?? (b.spellIndex + 1));
+    const pendingIndex = b.recovering ? currentIndex : null;
+
     const x = 16;
     const y = 10;
     const w = W - 32;
-    const hasSegments = stageTotal > 1;
-    const hpBarHeight = 12;
-    const timeBarHeight = 8;
-    const segmentsHeight = 6;
-    const hpBarY = y + 40;
-    const timeBarY = hpBarY + hpBarHeight + 8;
-    const segmentsY = timeBarY + timeBarHeight + 10;
-    const bottomBase = hasSegments ? (segmentsY + segmentsHeight) : (timeBarY + timeBarHeight);
-    const h = (bottomBase + 12) - y;
+    const headerH = 28;
+    const barHeight = 12;
+    const barGap = 8;
+    const barsHeight = spells.length * barHeight + Math.max(0, spells.length - 1) * barGap;
+    const infoH = 30;
+    const h = headerH + barsHeight + infoH;
 
     g.save();
-    g.globalAlpha = 0.85;
+    g.globalAlpha = 0.88;
     g.fillStyle = '#0b1220';
     g.fillRect(x, y, w, h);
     g.strokeStyle = '#384258';
     g.lineWidth = 2;
     g.strokeRect(x, y, w, h);
+    g.globalAlpha = 1;
 
     g.fillStyle = '#cdd6f4';
-    g.font = 'bold 14px ui-sans-serif, system-ui';
-    g.fillText(name, x + 10, y + 20);
+    g.font = 'bold 15px ui-sans-serif, system-ui';
+    g.textBaseline = 'top';
+    g.fillText('スペルカード', x + 12, y + 8);
+
+    let barY = y + headerH;
+    const barX = x + 12;
+    const barW = w - 24;
+    g.textBaseline = 'middle';
     g.font = '12px ui-sans-serif, system-ui';
-    g.fillStyle = '#8c8fa1';
-    const metaLine = metaParts.length > 0 ? ` · ${metaParts.join(' / ')}` : '';
-    g.fillText(`残り ${tLeft}/${tAll}s  Bonus ${bonus.toLocaleString('en-US')}${metaLine}`, x + 10, y + 34);
 
-    const hpBarX = x + 12;
-    const hpBarW = w - 24;
-    const hpRatio = Math.max(0, Math.min(1, (b.hp ?? 0) / Math.max(1, b.maxHp ?? 1)));
-    g.fillStyle = '#1f2937';
-    g.fillRect(hpBarX, hpBarY, hpBarW, hpBarHeight);
-    g.fillStyle = '#f87171';
-    g.fillRect(hpBarX, hpBarY, Math.floor(hpBarW * hpRatio), hpBarHeight);
-    g.strokeStyle = '#3a4263';
-    g.strokeRect(hpBarX, hpBarY, hpBarW, hpBarHeight);
-    g.fillStyle = '#cdd6f4';
-    g.font = '11px ui-sans-serif, system-ui';
-    g.fillText(`HP ${hpNow}/${hpAll}`, hpBarX + 4, hpBarY - 4);
-
-    const timeBarX = hpBarX;
-    const timeBarW = hpBarW;
-    const timeRatio = Math.max(0, Math.min(1, (b.spellTimeLeft || 0) / (b.spellTime || (b.spellTimeLeft || 1))));
-    g.fillStyle = '#132033';
-    g.fillRect(timeBarX, timeBarY, timeBarW, timeBarHeight);
-    g.fillStyle = '#38bdf8';
-    g.fillRect(timeBarX, timeBarY, Math.floor(timeBarW * timeRatio), timeBarHeight);
-    g.strokeStyle = '#3a4263';
-    g.strokeRect(timeBarX, timeBarY, timeBarW, timeBarHeight);
-    g.fillStyle = '#8c8fa1';
-    g.fillText('TIME', timeBarX + 4, timeBarY - 2);
-
-    if (hasSegments) {
-      const pendingIdx = null;
-      const currentStageIdx = b.spellStageIndex ?? (b.spellIndex + 1);
-      this._drawSpellSegments(g, hpBarX, segmentsY, hpBarW, stageTotal, {
-        history: b.completedSpells || [],
-        currentIndex: currentStageIdx,
-        recovering: false,
-        pendingIndex: pendingIdx
-      });
-    }
-
-    g.restore();
-  }
-
-  _drawSpellRecoveryHud(g, boss) {
-    const nextSpell = boss.pendingSpell || boss.spells?.[boss.spellIndex] || null;
-    const name = boss.spellPrepName || nextSpell?.name || '次のスペル';
-    const stageTotal = this._getBossSpellCount(boss);
-    const stageIdx = nextSpell?._stageIndex ?? (boss.spellStageIndex != null ? boss.spellStageIndex + 1 : (boss.completedSpells?.length || 0) + 1);
-    const globalIdx = nextSpell?._globalIndex ?? null;
-    const metaParts = [];
-    if (stageIdx != null && stageTotal) metaParts.push(`ステージ内 ${stageIdx}/${stageTotal}`);
-    if (globalIdx != null) metaParts.push(`通算 #${globalIdx}`);
-    const x = 16;
-    const y = 10;
-    const w = W - 32;
-    const progressBarHeight = 12;
-    const segmentsHeight = 6;
-    const progressY = y + 40;
-    const segmentsY = progressY + progressBarHeight + 14;
-    const hasSegments = stageTotal > 1;
-    const bottomBase = hasSegments ? (segmentsY + segmentsHeight) : (progressY + progressBarHeight);
-    const h = (bottomBase + 12) - y;
-
-    g.save();
-    g.globalAlpha = 0.85;
-    g.fillStyle = '#06111f';
-    g.fillRect(x, y, w, h);
-    g.strokeStyle = '#2a3147';
-    g.lineWidth = 2;
-    g.strokeRect(x, y, w, h);
-
-    g.fillStyle = '#cdd6f4';
-    g.font = 'bold 14px ui-sans-serif, system-ui';
-    g.fillText(`${name} 準備中`, x + 10, y + 20);
-    g.font = '12px ui-sans-serif, system-ui';
-    g.fillStyle = '#8c8fa1';
-    const metaLine = metaParts.length > 0 ? `（${metaParts.join(' / ')}）` : '';
-    g.fillText(`ボスの力が回復している… ${metaLine}`, x + 10, y + 34);
-
-    const progX = x + 12;
-    const progW = w - 24;
-    const ratio = Math.max(0, Math.min(1, boss.recoverDur > 1e-4 ? (boss.recoverT || 0) / boss.recoverDur : 1));
-    const grd = g.createLinearGradient(progX, progressY, progX + progW, progressY);
-    grd.addColorStop(0, '#50f2c1');
-    grd.addColorStop(1, '#1dd6ff');
-    g.fillStyle = '#102027';
-    g.fillRect(progX, progressY, progW, progressBarHeight);
-    g.fillStyle = grd;
-    g.fillRect(progX, progressY, Math.floor(progW * ratio), progressBarHeight);
-    g.strokeStyle = '#2f3d55';
-    g.strokeRect(progX, progressY, progW, progressBarHeight);
-    g.fillStyle = '#8c8fa1';
-    g.fillText('RECOVER', progX + 4, progressY - 2);
-
-    if (hasSegments) {
-      const pendingIdx = stageIdx;
-      const currentStageIdx = pendingIdx;
-      this._drawSpellSegments(g, progX, segmentsY, progW, stageTotal, {
-        history: boss.completedSpells || [],
-        currentIndex: currentStageIdx,
-        recovering: true,
-        pendingIndex: pendingIdx
-      });
-    }
-
-    g.restore();
-  }
-
-  _getBossSpellCount(boss) {
-    if (Array.isArray(boss?.baseConf?.spells) && boss.baseConf.spells.length > 0) return boss.baseConf.spells.length;
-    if (Array.isArray(this.stage?.boss?.spells) && this.stage.boss.spells.length > 0) return this.stage.boss.spells.length;
-    if (Array.isArray(boss?.spells)) return boss.spells.length;
-    return 0;
-  }
-
-  _drawSpellSegments(g, x, y, width, total, { history = [], currentIndex = null, recovering = false, pendingIndex = null } = {}) {
-    if (!total || total <= 1) return;
-    const gap = 6;
-    const usableWidth = Math.max(10, width);
-    const segWidth = Math.max(10, Math.min(28, (usableWidth - gap * (total - 1)) / total));
-    const totalSpan = segWidth * total + gap * (total - 1);
-    const startX = x + Math.max(0, (usableWidth - totalSpan) / 2);
-    const segHeight = 6;
-    const historyMap = new Map();
-    for (const entry of history) {
-      if (!entry || entry.index == null) continue;
-      historyMap.set(entry.index, !!entry.success);
-    }
-    let drawX = startX;
-    for (let idx = 1; idx <= total; idx++) {
+    for (let i = 0; i < spells.length; i++) {
+      const spell = spells[i];
+      const stageIdx = spell._stageIndex ?? (i + 1);
       let status = 'upcoming';
-      if (historyMap.has(idx)) {
-        status = historyMap.get(idx) ? 'captured' : 'failed';
-      } else if (recovering && pendingIndex === idx) {
-        status = 'preparing';
-      } else if (!recovering && currentIndex === idx) {
-        status = 'current';
+      if (history.has(stageIdx)) {
+        status = history.get(stageIdx) ? 'cleared' : 'failed';
       }
-      const fillColor = (status === 'captured') ? '#22c55e'
-        : (status === 'failed') ? '#ef4444'
-        : (status === 'current') ? '#facc15'
-        : (status === 'preparing') ? '#38bdf8'
-        : '#1e293b';
-      g.globalAlpha = 0.95;
-      g.fillStyle = fillColor;
-      g.fillRect(drawX, y, segWidth, segHeight);
-      g.globalAlpha = 1;
-      g.strokeStyle = '#475569';
+      if (!b.recovering && stageIdx === currentIndex) status = 'active';
+      if (b.recovering && stageIdx === pendingIndex) status = 'preparing';
+      if (stageIdx < currentIndex && !history.has(stageIdx)) status = 'cleared';
+
+      const baseColor = this._getSpellColor(stageIdx - 1);
+      const colors = this._spellBarColors(status, baseColor);
+      const progress = this._spellBarProgress(status, b, spell);
+
+      g.fillStyle = colors.back;
+      g.fillRect(barX, barY, barW, barHeight);
+      g.save();
+      g.globalAlpha = colors.fillAlpha;
+      g.fillStyle = colors.fill;
+      g.fillRect(barX, barY, Math.floor(barW * progress), barHeight);
+      g.restore();
+      g.strokeStyle = colors.stroke;
       g.lineWidth = 1;
-      g.strokeRect(drawX, y, segWidth, segHeight);
-      drawX += segWidth + gap;
+      g.strokeRect(barX, barY, barW, barHeight);
+
+      g.fillStyle = colors.text;
+      g.fillText(`${stageIdx}. ${spell.name || 'スペル'}`, barX + 6, barY + barHeight / 2);
+
+      if (status === 'cleared' || status === 'failed') {
+        g.fillStyle = status === 'cleared' ? '#bbf7d0' : '#fecaca';
+        g.textAlign = 'right';
+        g.fillText(status === 'cleared' ? 'CLEAR' : 'FAIL', barX + barW - 6, barY + barHeight / 2);
+        g.textAlign = 'left';
+      }
+
+      barY += barHeight + barGap;
+    }
+
+    const infoY = y + headerH + barsHeight + 6;
+    g.textBaseline = 'alphabetic';
+    g.font = '12px ui-sans-serif, system-ui';
+    g.fillStyle = '#8c8fa1';
+
+    if (!b.recovering) {
+      const currentSpell = this._findSpellByIndex(spells, currentIndex);
+      const hpNow = Math.max(0, Math.ceil(b.hp ?? 0));
+      const hpAll = Math.max(1, Math.ceil(currentSpell?.hp ?? b.maxHp ?? 1));
+      const tLeft = Math.max(0, Math.ceil(b.spellTimeLeft || 0));
+      const tAll = Math.max(1, Math.ceil(b.spellTime || (b.spellTimeLeft || 1)));
+      const bonus = Math.max(0, Math.floor(b.spellBonus || 0));
+      g.fillText(`HP ${hpNow}/${hpAll}`, x + 12, infoY);
+      g.fillText(`Time ${tLeft}/${tAll}s`, x + 160, infoY);
+      g.fillText(`Bonus ${bonus.toLocaleString('en-US')}`, x + 300, infoY);
+    } else {
+      const nextSpell = this._findSpellByIndex(spells, pendingIndex);
+      const pct = b.recoverDur > 1e-4 ? Math.min(100, Math.round(((b.recoverT || 0) / b.recoverDur) * 100)) : 100;
+      g.fillText(`次のスペル準備中: ${nextSpell?.name || '???'} (${pct}%)`, x + 12, infoY);
+    }
+
+    g.restore();
+  }
+
+  _getBossSpellCount() {
+    return this._resolveBossSpells().length;
+  }
+
+  _resolveBossSpells() {
+    if (Array.isArray(this.stage?.boss?.spells) && this.stage.boss.spells.length > 0) return this.stage.boss.spells;
+    const base = this.boss?.baseConf?.spells;
+    if (Array.isArray(base) && base.length > 0) return base;
+    if (Array.isArray(this.boss?.spells) && this.boss.spells.length > 0) return this.boss.spells;
+    return [];
+  }
+
+  _findSpellByIndex(spells, idx) {
+    if (!Array.isArray(spells)) return null;
+    for (let i = 0; i < spells.length; i++) {
+      const stageIdx = spells[i]?._stageIndex ?? (i + 1);
+      if (stageIdx === idx) return spells[i];
+    }
+    return null;
+  }
+
+  _getSpellColor(i) {
+    return SPELL_BAR_COLORS[i % SPELL_BAR_COLORS.length];
+  }
+
+  _spellBarProgress(status, boss, spell) {
+    if (status === 'active') {
+      const maxHp = Math.max(1, spell?.hp ?? boss.maxHp ?? 1);
+      return Math.max(0, Math.min(1, (boss.hp ?? 0) / maxHp));
+    }
+    if (status === 'preparing') {
+      const dur = Math.max(1e-4, boss.recoverDur || 0);
+      return Math.max(0, Math.min(1, (boss.recoverT || 0) / dur));
+    }
+    if (status === 'cleared' || status === 'failed') return 1;
+    return 1;
+  }
+
+  _spellBarColors(status, baseColor) {
+    const darker = lightenColor(baseColor, -0.65) || '#111827';
+    const stroke = lightenColor(baseColor, -0.2) || '#334155';
+    const text = '#e2e8f0';
+    switch (status) {
+      case 'active':
+        return { fill: baseColor, fillAlpha: 0.95, back: darker, stroke, text };
+      case 'preparing':
+        return { fill: lightenColor(baseColor, 0.35) || baseColor, fillAlpha: 0.7, back: darker, stroke, text };
+      case 'cleared':
+        return { fill: '#22c55e', fillAlpha: 0.9, back: '#064e3b', stroke: '#15803d', text: '#bbf7d0' };
+      case 'failed':
+        return { fill: '#ef4444', fillAlpha: 0.9, back: '#450a0a', stroke: '#dc2626', text: '#fecaca' };
+      case 'upcoming':
+      default:
+        return { fill: baseColor, fillAlpha: 0.45, back: darker, stroke, text: '#cbd5f5' };
     }
   }
 
