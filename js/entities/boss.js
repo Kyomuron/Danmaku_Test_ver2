@@ -65,12 +65,14 @@ export class Boss extends Enemy {
     this.patrolDriftAmp = 0;
     this.patrolDriftSpeed = 0;
     this.patrolDriftPhase = 0;
+    this.completedSpells = [];
   }
 
   spawn(conf) {
     super.spawn(conf);
     this.baseConf = conf;
     this.damagePerHit = conf.damagePerHit ?? PLAYER_SHOT_DMG_BOSS_DEFAULT;
+    this.completedSpells = [];
     // Sprite URLs (may be provided by game.js)
     this.spriteUrl = conf.sprite || null;
     this.spriteDamagedUrl = conf.spriteDamaged || null;
@@ -210,6 +212,11 @@ export class Boss extends Enemy {
     
     const prevName = this.spellName;
     const effectiveSuccess = success && !this.spellBroken;
+    const finishedStageIdx = this.spellStageIndex ?? (this.spellIndex + 1);
+    this.completedSpells ||= [];
+    if (finishedStageIdx != null) {
+      this.completedSpells.push({ index: finishedStageIdx, success: !!effectiveSuccess });
+    }
     if (effectiveSuccess) {
       sfxSpellCapture();
     } else {
