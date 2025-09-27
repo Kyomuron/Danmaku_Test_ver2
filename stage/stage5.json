@@ -1,0 +1,518 @@
+{
+  "scrollSpeed": 85,
+  "dialogue": {
+    "portraits": {
+      "boss": {
+        "normal": "assets/stage5/boss.png",
+        "damaged": "assets/stage5/boss_damaged.png"
+      },
+      "player": {
+        "normal": "assets/common/player.png"
+      }
+    },
+    "preBoss": {
+      "A": [
+        { "speaker": "boss",   "text": "ようこそ、私のソウルソサエティへ。" },
+        { "speaker": "player", "text": "そのセリフってアニメ化されていない時期からみんな言ってたよね。で、ここはどこ？" },
+        { "speaker": "boss",   "text": "ここは鬼ヶ島地下にある地獄。最後の審判を言い渡す場である。" },
+        { "speaker": "player", "text": "あなたはサンズということね？" },
+        { "speaker": "boss",   "text": "いいえ、私は三途の川から渡ってきた魂に判決を述べるヤマ。つまり、閻魔大王である。" },
+        { "speaker": "player", "text": "閻魔様か。僕ってどんな罪に問われているの？" },
+        { "speaker": "boss",   "text": "あなたはデビュー初配信に事前に録画した動画を用いましたね。" },
+        { "speaker": "player", "text": "え、なんで、バレて..." },
+        { "speaker": "boss",   "text": "さらに、二次会と言いながら早朝にアーカイブを消しました。" },
+        { "speaker": "player", "text": "そんなこともバレて..." },
+        { "speaker": "boss",   "text": "そう、あなたは生配信をナメすぎている。" },
+        { "speaker": "player", "text": "ナメてないよ！！インターネットタトゥーとか思ってないよ！！！" },
+        { "speaker": "boss",   "text": "そのような姿勢で配信に取り組むとは言語道断。ジャッジメントですの！" }
+      ],
+      "B": [
+        { "speaker": "boss",   "text": "ようこそ、私のソウルソサエティへ。" },
+        { "speaker": "player", "text": "そのセリフってアニメ化されていない時期からみんな言ってたよね。で、ここはどこ？" },
+        { "speaker": "boss",   "text": "ここは鬼ヶ島地下にある地獄。最後の審判を言い渡す場である。" },
+        { "speaker": "player", "text": "あなたはサンズということね？" },
+        { "speaker": "boss",   "text": "いいえ、私は三途の川から渡ってきた魂に判決を述べるヤマ。つまり、閻魔大王である。" },
+        { "speaker": "player", "text": "閻魔様か。僕ってどんな罪に問われているの？" },
+        { "speaker": "boss",   "text": "あなたはデビュー初配信に事前に録画した動画を用いましたね。" },
+        { "speaker": "player", "text": "え、なんで、バレて..." },
+        { "speaker": "boss",   "text": "さらに、二次会と言いながら早朝にアーカイブを消しました。" },
+        { "speaker": "player", "text": "そんなこともバレて..." },
+        { "speaker": "boss",   "text": "そう、あなたは生配信をナメすぎている。" },
+        { "speaker": "player", "text": "ナメてないよ！！インターネットタトゥーとか思ってないよ！！！" },
+        { "speaker": "boss",   "text": "そのような姿勢で配信に取り組むとは言語道断。ジャッジメントですの！" }
+      ]
+    },
+    "postBoss": {
+      "A": [
+        { "speaker": "player", "text": "激闘だった..." },
+        { "speaker": "boss",   "text": "あなたはこれまでの配信や動画を見てどう思いますか？" },
+        { "speaker": "player", "text": "アーカイブを見てくれる人の楽しみとか、役に立つならいいと思うよ。" },
+        { "speaker": "boss",   "text": "そう。であれば長く活動を続けなさい。下手の横好きです。" },
+        { "speaker": "player", "text": "そこは、好きこそものの上手なれって言えよ..." },
+        { "speaker": "boss",   "text": "インテリのように振る舞うのはやめなさい。いずれ化けの皮が剥がれます。" },
+        { "speaker": "player", "text": "おそらくもう剥がれてるよ涙" }
+      ],
+      "B": [
+        { "speaker": "player", "text": "激闘だった..." },
+        { "speaker": "boss",   "text": "あなたはこれまでの配信や動画を見てどう思いますか？" },
+        { "speaker": "player", "text": "アーカイブを見てくれる人の楽しみとか、役に立つならいいと思うよ。" },
+        { "speaker": "boss",   "text": "そう。であれば長く活動を続けなさい。下手の横好きです。" },
+        { "speaker": "player", "text": "そこは、好きこそものの上手なれって言えよ..." },
+        { "speaker": "boss",   "text": "インテリのように振る舞うのはやめなさい。いずれ化けの皮が剥がれます。" },
+        { "speaker": "player", "text": "おそらくもう剥がれてるよ涙" }
+      ]
+    },
+    "ending": {
+      "A": [
+        { "speaker": "player", "text": "鬼ヶ島に行くまでにたくさんのVtuberさんに会った。" },
+        { "speaker": "player", "text": "みんな濃いキャラクターで、それぞれ一生懸命に活動していた。" },
+        { "speaker": "player", "text": "活動にかける熱量や自分のセールスポイントは千差万別。" },
+        { "speaker": "player", "text": "ゲーム実況や歌配信などのエンタメ系、情報伝達系、クリエイター系、教育系。" },
+        { "speaker": "player", "text": "ジャンルの幅広さがゆえに、知名度を伸ばすことは難しい。" },
+        { "speaker": "player", "text": "一方で、どんな人でも受け入れる懐の深さを見せてくれる活動者業界。" },
+        { "speaker": "player", "text": "これから虚無ろんはどんな未来に進んでいくのか。" },
+        { "speaker": "player", "text": "是非、温かく見守ってくれると嬉しいな。" },
+        { "speaker": "player", "text": "Thank you for playing!" }
+      ],
+      "B": [
+        { "speaker": "player", "text": "自機B、遊んでくれてありがとう！" },
+        { "speaker": "player", "text": "こっちの方が少し難しかったのではないかしら？" },
+        { "speaker": "player", "text": "それでは以下、あとがきです。" },
+        { "speaker": "player", "text": "登場キャラクターを考えている時、めっちゃ楽しかった。" },
+        { "speaker": "player", "text": "イラストを描くのも楽しかったし、コーディングしている時も楽しかった。" },
+        { "speaker": "player", "text": "これまで自分はあまりクリエイティブな方ではないかなと思っていたけど、意外とできるもんだなぁという気持ちになりました。" },
+        { "speaker": "player", "text": "配信活動を通して、自分の知られざる一面に触れることができました。" },
+        { "speaker": "player", "text": "このエンディングを見ている人はごく少数かもしれないけど、僕はニッチな層にニッチなものを届ける活動者なのでよいのです！" },
+        { "speaker": "player", "text": "それでは、また動画で会いましょう！" },
+        { "speaker": "player", "text": "Thank you for playing!" }
+      ]
+    }
+  },
+  "waves": [
+    {
+      "time": 1,
+      "count": 10,
+      "every": 0.45,
+      "enemy": {
+        "spawn": {
+          "x": "rand(70,410)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 100
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "target",
+          "every": 0.75,
+          "count": 1,
+          "speed": 210,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#86efac"
+          }
+        }
+      }
+    },
+    {
+      "time": 13.5,
+      "count": 2,
+      "every": 1.2,
+      "enemy": {
+        "spawn": {
+          "x": "rand(140,340)",
+          "y": -30
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 100
+        },
+        "hp": 60,
+        "duration": 8,
+        "pattern": {
+          "type": "laser",
+          "every": 2.2,
+          "speed": 0,
+          "bullet": {
+            "color": "#ff6b6b"
+          }
+        }
+      }
+    },
+    {
+      "time": 5,
+      "count": 8,
+      "every": 0.65,
+      "enemy": {
+        "spawn": {
+          "x": 60,
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 95,
+          "vy": 115
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "spread",
+          "every": 0.8,
+          "count": 11,
+          "angleCenter": 110,
+          "angleWidth": 80,
+          "speed": 195,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.4,
+            "color": "#7dd3fc"
+          }
+        }
+      }
+    },
+    {
+      "time": 5.4,
+      "count": 8,
+      "every": 0.65,
+      "enemy": {
+        "spawn": {
+          "x": 420,
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": -95,
+          "vy": 115
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "spread",
+          "every": 0.8,
+          "count": 11,
+          "angleCenter": 70,
+          "angleWidth": 80,
+          "speed": 195,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.4,
+            "color": "#7dd3fc"
+          }
+        }
+      }
+    },
+    {
+      "time": 10,
+      "count": 16,
+      "every": 0.35,
+      "enemy": {
+        "spawn": {
+          "x": "rand(80,400)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 135
+        },
+        "hp": 28,
+        "duration": 6,
+        "pattern": {
+          "type": "target",
+          "every": 0.62,
+          "count": 3,
+          "angleWidth": 24,
+          "speed": 205,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#86efac"
+          }
+        }
+      }
+    },
+    {
+      "time": 15.5,
+      "count": 1,
+      "every": 0.1,
+      "enemy": {
+        "spawn": {
+          "x": 240,
+          "y": -30
+        },
+        "path": {
+          "type": "easeInOut",
+          "to": {
+            "x": 240,
+            "y": 148
+          },
+          "t": 2
+        },
+        "hp": 800,
+        "duration": 12,
+        "pattern": {
+          "type": "spiral",
+          "every": 0.055,
+          "count": 1,
+          "speed": 185,
+          "angVel": 300,
+          "bullet": {
+            "shape": "star",
+            "r": 4,
+            "color": "#fbbf24"
+          }
+        }
+      }
+    },
+    {
+      "time": 21,
+      "count": 14,
+      "every": 0.4,
+      "enemy": {
+        "spawn": {
+          "x": "rand(70,410)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 135
+        },
+        "hp": 28,
+        "duration": 6,
+        "pattern": {
+          "type": "spread",
+          "every": 0.75,
+          "count": 11,
+          "angleCenter": 90,
+          "angleWidth": 90,
+          "speed": 200,
+          "bullet": {
+            "shape": "heart",
+            "r": 4,
+            "color": "#f472b6"
+          }
+        }
+      }
+    }
+  ],
+  "midBosses": [
+    {
+      "time": 12.5,
+      "spawn": {
+        "x": 240,
+        "y": -40
+      },
+      "path": {
+        "type": "easeInOut",
+        "to": {
+          "x": 240,
+          "y": 165
+        },
+        "t": 2.2
+      },
+      "hp": 1300,
+      "damagePerHit": 2,
+      "switchEvery": 6,
+      "dialogue": {
+        "pre": [
+          { "speaker": "boss",   "name": "中ボス",     "text": "中ボスのセリフ1", "voice": "assets/voice/stage5/pre_mid_001.mp3" },
+          { "speaker": "player", "name": "プレイヤー", "text": "自機のセリフ1",   "voice": "assets/voice/stage5/pre_mid_002.mp3" },
+          { "speaker": "boss",   "name": "中ボス",     "text": "中ボスのセリフ2", "voice": "assets/voice/stage5/pre_mid_003.mp3" }
+        ]
+      },
+      "patterns": [
+        {
+          "type": "spiral",
+          "every": 0.05,
+          "count": 1,
+          "speed": 190,
+          "angVel": 300,
+          "bullet": {}
+        },
+        {
+          "type": "spread",
+          "every": 0.68,
+          "count": 11,
+          "angleCenter": 90,
+          "angleWidth": 85,
+          "speed": 195,
+          "bullet": {}
+        },
+        {
+          "type": "target",
+          "every": 0.5,
+          "count": 3,
+          "angleWidth": 20,
+          "speed": 215,
+          "bullet": {}
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "spawn": {
+      "x": 240,
+      "y": -40
+    },
+    "path": {
+      "type": "easeInOut",
+      "to": {
+        "x": 240,
+        "y": 128
+      },
+      "t": 2.3
+    },
+    "damagePerHit": 1.5,
+    "spells": [
+      {
+        "name": "スペルカード1",
+        "hp": 1600,
+        "time": 45,
+        "bonus": 380000,
+        "pattern": {
+          "type": "spiral",
+          "every": 0.05,
+          "count": 1,
+          "speed": 185,
+          "angVel": 300,
+          "bullet": {
+            "shape": "star",
+            "r": 4.2,
+            "color": "#fbbf24"
+          }
+        }
+      },
+      {
+        "name": "スペルカード2",
+        "hp": 1700,
+        "time": 48,
+        "bonus": 420000,
+        "pattern": {
+          "type": "spread",
+          "every": 0.68,
+          "count": 12,
+          "angleCenter": 90,
+          "angleWidth": 90,
+          "speed": 190,
+          "bullet": {
+            "shape": "ring",
+            "r": 3.2,
+            "color": "#7dd3fc"
+          }
+        }
+      },
+      {
+        "name": "スペルカード3",
+        "hp": 1800,
+        "time": 50,
+        "bonus": 460000,
+        "pattern": {
+          "type": "target",
+          "every": 0.5,
+          "count": 3,
+          "angleWidth": 18,
+          "speed": 215,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#fca5a5"
+          }
+        }
+      },
+      {
+        "name": "スペルカード4",
+        "hp": 1900,
+        "time": 52,
+        "bonus": 500000,
+        "pattern": {
+          "type": "spread",
+          "every": 0.64,
+          "count": 13,
+          "angleCenter": 90,
+          "angleWidth": 95,
+          "speed": 195,
+          "bullet": {
+            "shape": "heart",
+            "r": 4,
+            "color": "#f472b6"
+          }
+        }
+      },
+      {
+        "name": "スペルカード5",
+        "hp": 2000,
+        "time": 55,
+        "bonus": 540000,
+        "pattern": {
+          "type": "spiral",
+          "every": 0.045,
+          "count": 1,
+          "speed": 195,
+          "angVel": 320,
+          "bullet": {
+            "shape": "star",
+            "r": 4.2,
+            "color": "#fbbf24"
+          }
+        }
+      },
+      {
+        "name": "スペルカード6",
+        "hp": 2200,
+        "time": 58,
+        "bonus": 600000,
+        "pattern": {
+          "type": "target",
+          "every": 0.45,
+          "count": 4,
+          "angleWidth": 20,
+          "speed": 220,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.4,
+            "color": "#fca5a5"
+          }
+        }
+      },
+      {
+        "name": "スペルカード7",
+        "hp": 2100,
+        "time": 60,
+        "bonus": 660000,
+        "pattern": {
+          "type": "burst",
+          "every": 1,
+          "count": 24,
+          "speed": 195,
+          "bullet": {
+            "shape": "orb",
+            "r": 3.2,
+            "color": "#fde68a"
+          }
+        }
+      },
+      {
+        "name": "スペルカード8",
+        "hp": 2400,
+        "time": 62,
+        "bonus": 740000,
+        "pattern": {
+          "type": "crossLaser",
+          "every": 1.5,
+          "speed": 0,
+          "bullet": {
+            "color": "#ff6b6b"
+          }
+        }
+      }
+    ],
+    "bgm": "assets/bgm/boss5.mp3"
+  },
+  "bgm": "assets/bgm/stage5.mp3"
+}

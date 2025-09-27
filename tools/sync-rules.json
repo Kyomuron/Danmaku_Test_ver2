@@ -1,0 +1,16 @@
+{
+  "typeRename": {},
+  "shapeRename": {
+    "rhombus": "diamond"
+  },
+  "setDefaults": {
+    "every": null,
+    "count": null,
+    "speed": null,
+    "bullet": {
+      "shape": null,
+      "r": null,
+      "color": null
+    }
+  }
+}

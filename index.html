@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>弾幕シューティング</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="wrap">
+    <div class="layout">
+      <div class="left">
+        <canvas id="game" width="480" height="720" aria-label="danmaku"></canvas>
+        <div class="btns">
+          <button id="btnStart">▶ 開始</button>
+          <button id="btnRestart" class="muted">↻ リスタート</button>
+          <button id="btnPause" class="muted">⸏ 一時停止</button>
+        </div>
+        <div class="hud">操作: 矢印キー / Z: ショット / X: ボム / Shift: 低速 / P: ポーズ</div>
+      </div>
+      <div class="right">
+        <div class="panel">
+          <div class="hud" id="hud">読み込み中…</div>
+          <div class="stats" id="stats">
+            <div class="row"><span class="k">残機</span><span id="stLives">-</span></div>
+            <div class="row"><span class="k">ボム</span><span id="stBombs">-</span></div>
+            <div class="row"><span class="k">残機かけら</span><span id="stLShard">-</span></div>
+            <div class="row"><span class="k">ボムかけら</span><span id="stBShard">-</span></div>
+            <div class="row"><span class="k">パワー</span><span id="stPower">-</span></div>
+            <div class="row"><span class="k">スコア</span><span id="stScore">-</span></div>
+            <div class="row"><span class="k">グレイズ</span><span id="stGraze">-</span></div>
+            <div class="row"><span class="k">敵弾数</span><span id="stEBul">-</span></div>
+            <div class="row"><span class="k">難易度</span><span id="stDiff">-</span></div>
+            <div class="row"><span class="k">自機</span><span id="stShip">-</span></div>
+          </div>
+          <div class="btns diff menu-only">
+            <div class="label hud">難易度:</div>
+            <button id="btnDiffEasy" class="muted">かんたん</button>
+            <button id="btnDiffNormal">ふつう</button>
+            <button id="btnDiffHard" class="muted">むずかしい</button>
+          </div>
+          <div class="btns ship menu-only">
+            <div class="label hud">自機:</div>
+            <button id="btnShipA">Aタイプ</button>
+            <button id="btnShipB" class="muted">Bタイプ</button>
+          </div>
+          <div class="btns practice menu-only">
+            <div class="label hud">スペル練習:</div>
+            <button id="btnSpellPrev" class="muted">◀</button>
+            <div class="label hud" id="lblPractice">(読み込み中…)</div>
+            <button id="btnSpellNext" class="muted">▶</button>
+            <button id="btnPracticeStart" class="muted">☆ 練習開始</button>
+          </div>
+          <div class="btns voice">
+            <div class="label hud">ボイス:</div>
+            <button id="btnVoiceToggle">🎤 ON</button>
+            <button id="btnVoiceSkip" class="muted">⏭ スキップ</button>
+          </div>
+          <div class="btns back">
+            <button id="btnGoTitle">🏠 タイトルへ</button>
+          </div>
+          <div class="btns opening menu-only">
+            <div class="label hud">オープニング:</div>
+            <button id="btnOpening">▶ 表示</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+{
+  "scrollSpeed": 75,
+  "dialogue": {
+    "portraits": {
+      "boss": {
+        "normal": "assets/stage3/boss.png",
+        "damaged": "assets/stage3/boss_damaged.png"
+      },
+      "player": {
+        "normal": "assets/common/player.png"
+      }
+    },
+    "preBoss": {
+      "A": [
+        { "speaker": "player", "text": "船頭さんに先導され、やってきました鬼ヶ島！" },
+        { "speaker": "boss",   "text": "そこのお前、止まりなさい。" },
+        { "speaker": "player", "text": "おじいさん、どうしたんですか？" },
+        { "speaker": "boss",   "text": "ワシは鬼ヶ島ご当地バーチャルタレントの孫ご飯。鬼ヶ島に来たからには、これを食ってもらう。" },
+        { "speaker": "player", "text": "こ、これは瀬戸内海の海産物！タコとかエビとか美味しそう！" },
+        { "speaker": "boss",   "text": "ワシの新鮮な海産物咀嚼音ASMRは大人気なんじゃ。" },
+        { "speaker": "boss",   "text": "観光系Vtuberなら食レポをしろ！" }
+      ],
+      "B": [
+        { "speaker": "player", "text": "船頭さんに先導され、やってきました鬼ヶ島！" },
+        { "speaker": "boss",   "text": "そこのお前、止まりなさい。" },
+        { "speaker": "player", "text": "おじいさん、どうしたんですか？" },
+        { "speaker": "boss",   "text": "ワシは鬼ヶ島ご当地バーチャルタレントの孫ご飯。鬼ヶ島に来たからには、これを食ってもらう。" },
+        { "speaker": "player", "text": "こ、これは瀬戸内海の海産物！タコとかエビとか美味しそう！" },
+        { "speaker": "boss",   "text": "ワシの新鮮な海産物咀嚼音ASMRは大人気なんじゃ。" },
+        { "speaker": "boss",   "text": "観光系Vtuberなら食レポをしろ！" }
+      ]
+    },
+    "postBoss": {
+      "A": [
+        { "speaker": "boss",   "text": "実は私、バーチャルでおじいさんになってるだけの50代前半女性なんです涙" },
+        { "speaker": "player", "text": "え...バーチャルおじいちゃん受肉、略してバ爺肉だったことか..." },
+        { "speaker": "boss",   "text": "本当はご当地アイドルをやっていたんですけど、若い間しかできなくて。" },
+        { "speaker": "player", "text": "そっか。バーチャルだと年齢も性別も関係ないもんね。" },
+        { "speaker": "boss",   "text": "そうなんです！機械の操作は若いスタッフさんがやってくれるし、今すごく充実してます！" },
+        { "speaker": "player", "text": "(こ、これが企業勢か...)" }
+      ],
+      "B": [
+        { "speaker": "boss",   "text": "実は私、バーチャルでおじいさんになってるだけの50代女性なんです涙" },
+        { "speaker": "player", "text": "え...バーチャルおじいちゃん受肉、略してバ爺肉だったことか..." },
+        { "speaker": "boss",   "text": "本当はご当地アイドルをやっていたんですけど、若い間しかできなくて。" },
+        { "speaker": "player", "text": "そっか。バーチャルだと年齢も性別も関係ないもんね。" },
+        { "speaker": "boss",   "text": "そうなんです！機械の操作は若いスタッフさんがやってくれるし、今すごく充実してます！" },
+        { "speaker": "player", "text": "(こ、これが企業勢か...)" }
+      ]
+    }
+  },
+  "waves": [
+    {
+      "time": 1,
+      "count": 6,
+      "every": 0.55,
+      "enemy": {
+        "spawn": {
+          "x": "rand(60,420)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 90
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "target",
+          "every": 0.85,
+          "count": 1,
+          "speed": 200,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#86efac"
+          }
+        }
+      }
+    },
+    {
+      "time": 8.2,
+      "count": 5,
+      "every": 0.5,
+      "enemy": {
+        "spawn": {
+          "x": "rand(90,390)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 110
+        },
+        "hp": 30,
+        "duration": 7,
+        "pattern": {
+          "type": "butterfly",
+          "every": 1,
+          "count": 7,
+          "speed": 170,
+          "bullet": {
+            "shape": "butterfly",
+            "r": 3.1,
+            "color": "#fde047"
+          }
+        }
+      }
+    },
+    {
+      "time": 5.2,
+      "count": 5,
+      "every": 0.75,
+      "enemy": {
+        "spawn": {
+          "x": 60,
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 80,
+          "vy": 105
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "spread",
+          "every": 0.9,
+          "count": 7,
+          "angleCenter": 110,
+          "angleWidth": 60,
+          "speed": 180,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.2,
+            "color": "#7dd3fc"
+          }
+        }
+      }
+    },
+    {
+      "time": 20,
+      "count": 3,
+      "every": 0.7,
+      "enemy": {
+        "spawn": {
+          "x": "rand(80,400)",
+          "y": -30
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 110
+        },
+        "hp": 35,
+        "duration": 6,
+        "pattern": {
+          "type": "homing",
+          "every": 1.2,
+          "count": 3,
+          "speed": 150,
+          "bullet": {
+            "shape": "orb",
+            "r": 3.2,
+            "color": "#ff9999"
+          }
+        }
+      }
+    },
+    {
+      "time": 5.6,
+      "count": 5,
+      "every": 0.75,
+      "enemy": {
+        "spawn": {
+          "x": 420,
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": -80,
+          "vy": 105
+        },
+        "hp": 28,
+        "duration": 7,
+        "pattern": {
+          "type": "spread",
+          "every": 0.9,
+          "count": 7,
+          "angleCenter": 70,
+          "angleWidth": 60,
+          "speed": 180,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.2,
+            "color": "#7dd3fc"
+          }
+        }
+      }
+    },
+    {
+      "time": 10.2,
+      "count": 12,
+      "every": 0.4,
+      "enemy": {
+        "spawn": {
+          "x": "rand(80,400)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 120
+        },
+        "hp": 28,
+        "duration": 6,
+        "pattern": {
+          "type": "target",
+          "every": 0.7,
+          "count": 3,
+          "angleWidth": 20,
+          "speed": 195,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#86efac"
+          }
+        }
+      }
+    },
+    {
+      "time": 16.5,
+      "count": 1,
+      "every": 0.1,
+      "enemy": {
+        "spawn": {
+          "x": 240,
+          "y": -30
+        },
+        "path": {
+          "type": "easeInOut",
+          "to": {
+            "x": 240,
+            "y": 150
+          },
+          "t": 2
+        },
+        "hp": 700,
+        "duration": 12,
+        "pattern": {
+          "type": "spiral",
+          "every": 0.065,
+          "count": 1,
+          "speed": 175,
+          "angVel": 260,
+          "bullet": {
+            "shape": "star",
+            "r": 3.6,
+            "color": "#fbbf24"
+          }
+        }
+      }
+    },
+    {
+      "time": 22,
+      "count": 10,
+      "every": 0.45,
+      "enemy": {
+        "spawn": {
+          "x": "rand(70,410)",
+          "y": -20
+        },
+        "path": {
+          "type": "line",
+          "vx": 0,
+          "vy": 125
+        },
+        "hp": 28,
+        "duration": 6,
+        "pattern": {
+          "type": "spread",
+          "every": 0.85,
+          "count": 7,
+          "angleCenter": 90,
+          "angleWidth": 70,
+          "speed": 185,
+          "bullet": {
+            "shape": "heart",
+            "r": 3.6,
+            "color": "#f472b6"
+          }
+        }
+      }
+    }
+  ],
+  "midBosses": [
+    {
+      "time": 14.2,
+      "spawn": {
+        "x": 240,
+        "y": -40
+      },
+      "path": {
+        "type": "easeInOut",
+        "to": {
+          "x": 240,
+          "y": 170
+        },
+        "t": 2
+      },
+      "hp": 1100,
+      "damagePerHit": 3,
+      "switchEvery": 6,
+      "patterns": [
+        {
+          "type": "spiral",
+          "every": 0.055,
+          "count": 1,
+          "speed": 180,
+          "angVel": 260,
+          "bullet": {
+            "shape": "star",
+            "r": 3.6,
+            "color": "#fbbf24"
+          }
+        },
+        {
+          "type": "spread",
+          "every": 0.75,
+          "count": 9,
+          "angleCenter": 90,
+          "angleWidth": 75,
+          "speed": 190,
+          "bullet": {
+            "shape": "ring",
+            "r": 3,
+            "color": "#7dd3fc"
+          }
+        },
+        {
+          "type": "target",
+          "every": 0.55,
+          "count": 3,
+          "angleWidth": 18,
+          "speed": 205,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#86efac"
+          }
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "spawn": {
+      "x": 240,
+      "y": -40
+    },
+    "path": {
+      "type": "easeInOut",
+      "to": {
+        "x": 240,
+        "y": 135
+      },
+      "t": 2.1
+    },
+    "damagePerHit": 2.5,
+    "spells": [
+      {
+        "name": "スペルカード1",
+        "hp": 1400,
+        "time": 35,
+        "bonus": 200000,
+        "pattern": {
+          "type": "spiral",
+          "every": 0.05,
+          "count": 1,
+          "speed": 180,
+          "angVel": 280,
+          "bullet": {
+            "shape": "star",
+            "r": 3.8,
+            "color": "#fbbf24"
+          }
+        }
+      },
+      {
+        "name": "スペルカード2",
+        "hp": 1500,
+        "time": 38,
+        "bonus": 220000,
+        "pattern": {
+          "type": "spread",
+          "every": 0.68,
+          "count": 12,
+          "angleCenter": 90,
+          "angleWidth": 80,
+          "speed": 185,
+          "bullet": {
+            "shape": "ring",
+            "r": 3.2,
+            "color": "#7dd3fc"
+          }
+        }
+      },
+      {
+        "name": "スペルカード3",
+        "hp": 1600,
+        "time": 40,
+        "bonus": 240000,
+        "pattern": {
+          "type": "target",
+          "every": 0.5,
+          "count": 3,
+          "angleWidth": 18,
+          "speed": 215,
+          "bullet": {
+            "shape": "arrow",
+            "r": 3.2,
+            "color": "#fca5a5"
+          }
+        }
+      },
+      {
+        "name": "スペルカード4",
+        "hp": 1800,
+        "time": 42,
+        "bonus": 260000,
+        "pattern": {
+          "type": "spread",
+          "every": 0.6,
+          "count": 14,
+          "angleCenter": 90,
+          "angleWidth": 90,
+          "speed": 190,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.2,
+            "color": "#f38ba8"
+          }
+        }
+      },
+      {
+        "name": "スペルカード5",
+        "hp": 1600,
+        "time": 44,
+        "bonus": 280000,
+        "pattern": {
+          "type": "flower",
+          "every": 0.55,
+          "count": 1,
+          "speed": 175,
+          "bullet": {
+            "shape": "diamond",
+            "r": 3.2,
+            "color": "#f472b6"
+          }
+        }
+      }
+    ],
+    "bgm": "assets/bgm/boss3.mp3"
+  },
+  "bgm": "assets/bgm/stage3.mp3"
+}
