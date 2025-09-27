@@ -184,7 +184,8 @@ export class Boss extends Enemy {
     this.recoverDur = Math.max(0.12, recConf.duration ?? 1.2);
     this.recoverT = 0;
     this.recoverStartHp = Math.max(0, this.hp);
-    const targetHp = Math.max(1, nextSpell.hp ?? this.baseConf?.hp ?? this.maxHp || 1500);
+    const fallbackHp = nextSpell.hp ?? this.baseConf?.hp ?? this.maxHp ?? 1500;
+    const targetHp = Math.max(1, fallbackHp);
     this.recoverTargetHp = targetHp;
     this.maxHp = targetHp;
     this.hp = this.recoverStartHp;
