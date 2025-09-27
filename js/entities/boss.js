@@ -66,6 +66,8 @@ export class Boss extends Enemy {
     this.patrolDriftSpeed = 0;
     this.patrolDriftPhase = 0;
     this.completedSpells = [];
+    this.spellIntroT = 0;
+    this.spellIntroGrace = 0;
   }
 
   spawn(conf) {
@@ -73,6 +75,8 @@ export class Boss extends Enemy {
     this.baseConf = conf;
     this.damagePerHit = conf.damagePerHit ?? PLAYER_SHOT_DMG_BOSS_DEFAULT;
     this.completedSpells = [];
+    this.spellIntroT = 0;
+    this.spellIntroGrace = 0;
     // Sprite URLs (may be provided by game.js)
     this.spriteUrl = conf.sprite || null;
     this.spriteDamagedUrl = conf.spriteDamaged || null;
@@ -153,6 +157,13 @@ export class Boss extends Enemy {
     this.spellBonus = Math.max(0, sp.bonus ?? 100000);
     this.spellBroken = false;
     this.declareT = 0;
+    const introBase = this.baseConf?.spellIntroTime;
+    const introGraceBase = this.baseConf?.spellIntroGrace;
+    const introTime = Math.max(0, sp.introTime ?? introBase ?? 0.7);
+    const introGrace = Math.max(0, sp.introGrace ?? introGraceBase ?? 0.35);
+    this.spellIntroT = introTime;
+    this.spellIntroGrace = introGrace;
+    this.inv = Math.max(this.inv ?? 0, introTime + introGrace);
     sfxSpellDecl();
     
     // Add ambient emitter
@@ -240,6 +251,14 @@ export class Boss extends Enemy {
     this.t += dt;
     if (this.spellResultTimer > 0) {
       this.spellResultTimer = Math.max(0, this.spellResultTimer - dt);
+    }
+
+    if (this.inv && this.inv > 0) {
+      this.inv = Math.max(0, this.inv - dt);
+    }
+
+    if (this.spellIntroT > 0) {
+      this.spellIntroT = Math.max(0, this.spellIntroT - dt);
     }
 
     if (this.recovering) {

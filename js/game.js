@@ -1302,6 +1302,11 @@ export class Game {
       if (!em._rt) em._rt = this._createEmitterRuntime(em.pattern, owner);
       const rt = em._rt;
       if (!rt) continue;
+      if (owner.spellIntroT && owner.spellIntroT > 0) {
+        rt.cd = Math.max(rt.cd, 0);
+        rt.t += dt;
+        continue;
+      }
       rt.t += dt;
       rt.cd -= dt;
       while (rt.cd <= 1e-8) {
@@ -1530,7 +1535,7 @@ export class Game {
           if (e.hp <= 0) { e.active = false; this._dropFromEnemy(e); }
         }
       }
-      if (!hit && this.boss && this.boss.active && !this.boss.recovering) {
+      if (!hit && this.boss && this.boss.active && !this.boss.recovering && !(this.boss.inv > 0)) {
         const b = this.boss;
         const rr = (b.hitR || b.r || 24) + (s.r || 2);
         if (dist2(b.x, b.y, s.x, s.y) <= rr * rr) {
