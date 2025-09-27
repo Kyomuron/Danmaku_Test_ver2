@@ -746,13 +746,14 @@ export class Game {
     while (this._eventIdx < len) {
       const e = ev[this._eventIdx];
       if (!e || e.t > T + 1e-6) break;
-      if (this._bossCalmActive) break;
       if (this._midActive && e.type !== 'midboss') break;
       this._eventIdx++;
       this._dispatchStageEvent(e);
     }
-    const bossEligible = !this.boss && !this._bossFlowStarted && !this._midActive && this.stage?.boss && this.mode === 'normal';
+    const timelineDone = this._eventIdx >= len;
+    const bossEligible = timelineDone && !this.boss && !this._bossFlowStarted && !this._midActive && this.stage?.boss && this.mode === 'normal';
     const calmNeed = this._bossCalmNeeded ?? 0;
+    if (!bossEligible && this._bossCalmActive) this._onBossCalmCancel();
     if (bossEligible && !this._bossWarningActive) {
       const anyActiveEnemy = this.enemies.some(e => e && e.active);
       if (anyActiveEnemy) {
